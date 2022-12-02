@@ -82,7 +82,8 @@ let config = {
     SUNRAYS_WEIGHT: 0.5,
     FORCE_MAP_ENABLE: true,
     DENSITY_MAP_ENABLE: true, 
-    COLOR_MAP_ENABLE:true
+    COLOR_MAP_ENABLE:true,
+    NOISE_TRANSLATE_SPEED: 0.1
 }
 
 
@@ -1361,7 +1362,7 @@ update();
 function update () {
     //time step 
     const dt = calcDeltaTime();
-    noiseSeed += dt;
+    noiseSeed += dt * config.NOISE_TRANSLATE_SPEED;
     if (resizeCanvas()) //resize if needed 
         initFramebuffers();
     updateColors(dt); //step through our sim 
