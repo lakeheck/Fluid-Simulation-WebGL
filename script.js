@@ -234,7 +234,7 @@ function bindForceWithDensityMap () {
 }
 
 function startGUI () {
-    const parName = 'quality_30';
+    const parName = 'quality_31';
     //dat is a library developed by Googles Data Team for building JS interfaces. Needs to be included in project directory 
     var gui = new dat.GUI({ width: 300 });
     gui.add(config, 'DYE_RESOLUTION', { 'high': 1024, 'medium': 512, 'low': 256, 'very low': 128 }).name(parName).onFinishChange(initFramebuffers);
@@ -1121,7 +1121,8 @@ let noise;
 
 //load texture for dithering
 let ditheringTexture = createTextureAsync('LDR_LLL1_0.png');
-let picture = createTextureAsync('img/flowers_fence.JPG');
+// let picture = createTextureAsync('img/flowers_fence.JPG');
+let picture = createTextureAsync('img/lake-heckaman-IMG_0997-dec-2022.jpg');
 // console.log('loaded picture successfully');
 
 //create all our shader programs 
