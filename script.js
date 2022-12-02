@@ -83,7 +83,7 @@ let config = {
     FORCE_MAP_ENABLE: true,
     DENSITY_MAP_ENABLE: true, 
     COLOR_MAP_ENABLE:true,
-    NOISE_TRANSLATE_SPEED: 0.1
+    NOISE_TRANSLATE_SPEED: 1.0
 }
 
 
@@ -234,7 +234,7 @@ function bindForceWithDensityMap () {
 }
 
 function startGUI () {
-    const parName = 'quality_29';
+    const parName = 'quality_30';
     //dat is a library developed by Googles Data Team for building JS interfaces. Needs to be included in project directory 
     var gui = new dat.GUI({ width: 300 });
     gui.add(config, 'DYE_RESOLUTION', { 'high': 1024, 'medium': 512, 'low': 256, 'very low': 128 }).name(parName).onFinishChange(initFramebuffers);
