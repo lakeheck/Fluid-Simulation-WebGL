@@ -28,7 +28,7 @@ Pressure passes indicate the number of iterations in our Poisson solver
 
 ## References
 
-Forked from https://github.com/PavelDoGreat/WebGL-Fluid-Simulation
+WebGL implemention example https://github.com/PavelDoGreat/WebGL-Fluid-Simulation 
 
 NVDIA guide to implementing fluid simulations on the GPU - http://developer.download.nvidia.com/books/HTML/gpugems/gpugems_ch38.html
 
