@@ -1507,12 +1507,7 @@ function step (dt) {
         splatVelProgram.bind();
         gl.uniform1i(splatVelProgram.uniforms.uTarget, velocity.read.attach(0)); 
         // gl.uniform1i(splatVelProgram.uniforms.uTarget, velocity.read.attach(0));
-        if(config.DENSITY_MAP_ENABLE){
-            gl.uniform1i(splatVelProgram.uniforms.uDensityMap, picture.attach(1)); //density map
-        }
-        else{
-            gl.uniform1i(splatVelProgram.uniforms.uDensityMap, dye.attach(1)); //density map
-        }
+        gl.uniform1i(splatVelProgram.uniforms.uDensityMap, picture.attach(1)); //density map
         gl.uniform1i(splatVelProgram.uniforms.uForceMap, noise.attach(2)); //add noise for velocity map 
         gl.uniform1f(splatVelProgram.uniforms.aspectRatio, canvas.width / canvas.height);
         gl.uniform1f(splatVelProgram.uniforms.uVelocityScale, config.VELOCITYSCALE);
