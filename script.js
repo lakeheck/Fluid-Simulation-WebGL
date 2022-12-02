@@ -79,7 +79,7 @@ let config = {
     BLOOM_SOFT_KNEE: 0.7,
     SUNRAYS: true,
     SUNRAYS_RESOLUTION: 196,
-    SUNRAYS_WEIGHT: 1.0,
+    SUNRAYS_WEIGHT: 0.5,
     FORCE_MAP_ENABLE: true,
     DENSITY_MAP_ENABLE: true, 
     COLOR_MAP_ENABLE:true
@@ -263,9 +263,9 @@ function startGUI () {
     // bloomFolder.add(config, 'BLOOM_INTENSITY', 0.1, 2.0).name('intensity');
     // bloomFolder.add(config, 'BLOOM_THRESHOLD', 0.0, 1.0).name('threshold');
 
-    // let sunraysFolder = gui.addFolder('Sunrays');
-    // sunraysFolder.add(config, 'SUNRAYS').name('enabled').onFinishChange(updateKeywords);
-    // sunraysFolder.add(config, 'SUNRAYS_WEIGHT', 0.3, 1.0).name('weight');
+    let sunraysFolder = gui.addFolder('Sunrays');
+    sunraysFolder.add(config, 'SUNRAYS').name('enabled').onFinishChange(updateKeywords);
+    sunraysFolder.add(config, 'SUNRAYS_WEIGHT', 0.3, 1.0).name('weight');
 
     let captureFolder = gui.addFolder('Capture');
     captureFolder.addColor(config, 'BACK_COLOR').name('background color');
