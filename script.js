@@ -864,11 +864,6 @@ const splatVelShader = compileShader(gl.FRAGMENT_SHADER, `
         p.x *= aspectRatio;
         vec3 splat = vec3(0.0);
         splat = smoothstep(0.0, 1.0, texture2D(uDensityMap, vUv).xyz) * (normalize(texture2D(uForceMap, vUv).rgb)*2.0-1.0) * uVelocityScale;
-        // if(uClick == 0){ //click is 0 if we are simply adding from force map
-        // }
-        // else{ //or 1 if the splat is coming from a user interaction 
-        //     splat = (exp(-dot(p, p) / radius)*(1.0-color.z) + texture2D(uDensityMap, vUv).xyz*color.z) * uForceMap.rgb;
-        // }
         splat.z = 0.0;
         vec3 base = texture2D(uTarget, vUv).xyz;
         gl_FragColor = vec4(base + splat, 1.0);
@@ -1512,7 +1507,12 @@ function step (dt) {
         splatVelProgram.bind();
         gl.uniform1i(splatVelProgram.uniforms.uTarget, velocity.read.attach(0)); 
         // gl.uniform1i(splatVelProgram.uniforms.uTarget, velocity.read.attach(0));
-        gl.uniform1i(splatVelProgram.uniforms.uDensityMap, picture.attach(1)); //density map
+        if(config.DENSITY_MAP_ENABLE){
+            gl.uniform1i(splatVelProgram.uniforms.uDensityMap, picture.attach(1)); //density map
+        }
+        else{
+            gl.uniform1i(splatVelProgram.uniforms.uDensityMap, dye.attach(1)); //density map
+        }
         gl.uniform1i(splatVelProgram.uniforms.uForceMap, noise.attach(2)); //add noise for velocity map 
         gl.uniform1f(splatVelProgram.uniforms.aspectRatio, canvas.width / canvas.height);
         gl.uniform1f(splatVelProgram.uniforms.uVelocityScale, config.VELOCITYSCALE);
