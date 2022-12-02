@@ -229,7 +229,7 @@ function supportRenderTextureFormat (gl, internalFormat, format, type) {
 
 
 function startGUI () {
-    const parName = 'quality_27';
+    const parName = 'quality_28';
     //dat is a library developed by Googles Data Team for building JS interfaces. Needs to be included in project directory 
     var gui = new dat.GUI({ width: 300 });
     gui.add(config, 'DYE_RESOLUTION', { 'high': 1024, 'medium': 512, 'low': 256, 'very low': 128 }).name(parName).onFinishChange(initFramebuffers);
