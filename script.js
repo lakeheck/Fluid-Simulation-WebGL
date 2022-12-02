@@ -248,15 +248,17 @@ function startGUI () {
     gui.add(config, 'SHADING').name('shading').onFinishChange(updateKeywords);
     // gui.add(config, 'COLORFUL').name('colorful');
     gui.add(config, 'PAUSED').name('paused').listen();
-
-    let mapFolder = gui.addFolder('Maps');
-    mapFolder.add(config, 'FORCE_MAP_ENABLE').name('force map enable').onFinishChange(bindForceWithDensityMap);
-    mapFolder.add(config, 'DENSITY_MAP_ENABLE').name('density map enable').listen();
-    // mapFolder.add(config, 'COLOR_MAP_ENABLE').name('color map enable');
-
+    
     gui.add({ fun: () => {
         splatStack.push(parseInt(Math.random() * 20) + 5);
     } }, 'fun').name('Random splats');
+    
+    
+    let mapFolder = gui.addFolder('Maps');
+    mapFolder.add(config, 'FORCE_MAP_ENABLE').name('force map enable').onFinishChange(bindForceWithDensityMap);
+    mapFolder.add(config, 'DENSITY_MAP_ENABLE').name('density map enable').listen(); //adding listen() will update the ui if the parameter value changes elsewhere in the program 
+    // mapFolder.add(config, 'COLOR_MAP_ENABLE').name('color map enable');
+
 
     // let bloomFolder = gui.addFolder('Bloom');
     // bloomFolder.add(config, 'BLOOM').name('enabled').onFinishChange(updateKeywords);
@@ -1349,7 +1351,7 @@ function updateKeywords () {
 updateKeywords();
 initFramebuffers();
 multipleSplats(parseInt(Math.random() * 20) + 5);
-
+let noiseSeed = 0.0; 
 let lastUpdateTime = Date.now();
 let colorUpdateTimer = 0.0;
 update();
@@ -1359,6 +1361,7 @@ update();
 function update () {
     //time step 
     const dt = calcDeltaTime();
+    noiseSeed += dt;
     if (resizeCanvas()) //resize if needed 
         initFramebuffers();
     updateColors(dt); //step through our sim 
@@ -1425,16 +1428,12 @@ function step (dt) {
     gl.uniform1f(noiseProgram.uniforms.uPeriod, 0.75); 
     gl.uniform3f(noiseProgram.uniforms.uTranslate, 0.0, 0.0, 0.0);
     gl.uniform1f(noiseProgram.uniforms.uAmplitude, 1.); 
-    gl.uniform1f(noiseProgram.uniforms.uSeed, 1.); 
+    gl.uniform1f(noiseProgram.uniforms.uSeed, noiseSeed); 
     gl.uniform1f(noiseProgram.uniforms.uExponent, 1.); 
     gl.uniform1f(noiseProgram.uniforms.uRidgeThreshold, 1.); 
     gl.uniform3f(noiseProgram.uniforms.uScale, 1., 1., 1.); 
     gl.uniform1f(noiseProgram.uniforms.uAspect, config.VELOCITY_DISSIPATION); 
     blit(noise);
-
-
-
-
 
     curlProgram.bind();
     gl.uniform2f(curlProgram.uniforms.texelSize, velocity.texelSizeX, velocity.texelSizeY);
