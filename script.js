@@ -228,6 +228,10 @@ function supportRenderTextureFormat (gl, internalFormat, format, type) {
 }
 
 
+function bindForceWithDensityMap () {
+    if (config.FORCE_MAP_ENABLE) config.DENSITY_MAP_ENABLE = true;
+}
+
 function startGUI () {
     const parName = 'quality_28';
     //dat is a library developed by Googles Data Team for building JS interfaces. Needs to be included in project directory 
@@ -246,9 +250,9 @@ function startGUI () {
     gui.add(config, 'PAUSED').name('paused').listen();
 
     let mapFolder = gui.addFolder('Maps');
-    mapFolder.add(config, 'FORCE_MAP_ENABLE').name('force map enable');
+    mapFolder.add(config, 'FORCE_MAP_ENABLE').name('force map enable').onFinishChange(bindForceWithDensityMap);
     mapFolder.add(config, 'DENSITY_MAP_ENABLE').name('density map enable');
-    mapFolder.add(config, 'COLOR_MAP_ENABLE').name('color map enable');
+    // mapFolder.add(config, 'COLOR_MAP_ENABLE').name('color map enable');
 
     gui.add({ fun: () => {
         splatStack.push(parseInt(Math.random() * 20) + 5);
