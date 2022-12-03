@@ -55,9 +55,10 @@ let config = {
     SIM_RESOLUTION: 256, //simres
     DYE_RESOLUTION: 1024, //output res 
     ASPECT: 1.0,
-    FLOW: 0.5,
+    FLOW: 0.05,
+    SPLAT_FLOW: 0.5,
     VELOCITYSCALE: 1.0,
-    CAPTURE_RESOLUTION: 512, //screen capture res 
+    CAPTURE_RESOLUTION: 1024, //screen capture res 
     DENSITY_DISSIPATION: .05, //def need to figure out this one, think perhaps bc im squaring the color in splatColor
     VELOCITY_DISSIPATION: 2.15,
     PRESSURE: 0.8,
@@ -243,7 +244,7 @@ function supportRenderTextureFormat (gl, internalFormat, format, type) {
 // }
 
 function startGUI () {
-    const parName = 'quality_31';
+    const parName = 'Output Resolution';
     //dat is a library developed by Googles Data Team for building JS interfaces. Needs to be included in project directory 
     var gui = new dat.GUI({ width: 300 });
 
@@ -251,16 +252,17 @@ function startGUI () {
 
     let fluidFolder = gui.addFolder('Fluid Settings');
     fluidFolder.add(config, 'DYE_RESOLUTION', { 'high': 1024, 'medium': 512, 'low': 256, 'very low': 128 }).name(parName).onFinishChange(initFramebuffers);
-    fluidFolder.add(config, 'SIM_RESOLUTION', { '32': 32, '64': 64, '128': 128, '256': 256 }).name('sim resolution').onFinishChange(initFramebuffers);
-    fluidFolder.add(config, 'DENSITY_DISSIPATION', 0, 4.0).name('density diffusion');
-    fluidFolder.add(config, 'FLOW', 0, 0.5).name('flow');
-    fluidFolder.add(config, 'VELOCITY_DISSIPATION', 0, 4.0).name('velocity diffusion');
-    fluidFolder.add(config, 'VELOCITYSCALE', 0, 10.0).name('velocity scale');
-    fluidFolder.add(config, 'PRESSURE', 0.0, 1.0).name('pressure');
-    fluidFolder.add(config, 'CURL', 0, 50).name('vorticity').step(1);
-    fluidFolder.add(config, 'SPLAT_RADIUS', 0.01, 1.0).name('splat radius');
-    fluidFolder.add(config, 'SHADING').name('shading').onFinishChange(updateKeywords);
-    fluidFolder.add(config, 'PAUSED').name('paused').listen();
+    fluidFolder.add(config, 'SIM_RESOLUTION', { '32': 32, '64': 64, '128': 128, '256': 256 }).name('Sim Resolution').onFinishChange(initFramebuffers);
+    fluidFolder.add(config, 'DENSITY_DISSIPATION', 0, 4.0).name('Density Diffusion');
+    fluidFolder.add(config, 'FLOW', 0, 0.5).name('Flow');
+    fluidFolder.add(config, 'SPLAT_FLOW', 0, 1).name('Splat Flow');
+    fluidFolder.add(config, 'VELOCITY_DISSIPATION', 0, 4.0).name('Velocity Diffusion');
+    fluidFolder.add(config, 'VELOCITYSCALE', 0, 10.0).name('Velocity Scale');
+    fluidFolder.add(config, 'PRESSURE', 0.0, 1.0).name('Pressure');
+    fluidFolder.add(config, 'CURL', 0, 50).name('Vorticity').step(1);
+    fluidFolder.add(config, 'SPLAT_RADIUS', 0.01, 1.0).name('Splat Radius');
+    fluidFolder.add(config, 'SHADING').name('Shading').onFinishChange(updateKeywords);
+    fluidFolder.add(config, 'PAUSED').name('Paused').listen();
     fluidFolder.add({ fun: () => {
         splatStack.push(parseInt(Math.random() * 20) + 5);
     } }, 'fun').name('Random splats');
@@ -2019,7 +2021,7 @@ function splat (x, y, dx, dy, color) {
 
     //pulling the color to add to the sim from a colormap 
     splatColorClickProgram.bind();
-    gl.uniform1f(splatColorClickProgram.uniforms.uFlow, config.FLOW);
+    gl.uniform1f(splatColorClickProgram.uniforms.uFlow, config.SPLAT_FLOW);
     gl.uniform1f(splatColorClickProgram.uniforms.aspectRatio, canvas.width / canvas.height);
     gl.uniform2f(splatColorClickProgram.uniforms.point, x, y);
     gl.uniform1i(splatColorClickProgram.uniforms.uTarget, dye.read.attach(0));
