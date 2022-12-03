@@ -276,7 +276,7 @@ function startGUI () {
     noiseFolder.add(config, 'EXPONENT', 0, 4.0).name('Exponent');
     noiseFolder.add(config, 'RIDGE', 0, 1.5).name('Ridge');
     noiseFolder.add(config, 'AMP', 0, 4.0).name('Amplitude');
-    noiseFolder.add(config, 'LACUNARITY', 0, 2).name('Lacunarity');
+    noiseFolder.add(config, 'LACUNARITY', 0, 4).name('Lacunarity');
     noiseFolder.add(config, 'NOISE_TRANSLATE_SPEED', 0, 2).name('Noise Translate Speed');
     noiseFolder.add(config, 'GAIN', 0.0, 1.0).name('Gain');
     noiseFolder.add(config, 'OCTAVES', 0, 8).name('Octaves').step(1);
@@ -559,6 +559,9 @@ uniform float uExponent;
 uniform float uRidgeThreshold;
 uniform vec3 uScale;
 uniform float uAspect;
+uniform float uLacunarity;
+uniform float uGain;
+uniform int uOctaves;
 
 #define Index 1
 #define PI 3.141592653589793
@@ -677,7 +680,7 @@ float monoNoise(vec3 st){
 }
 
 
-#define FBM(NOISE, SEED) float G=0.5; float freq = 1.0; float a = 1.0; float t = 0.0;for(int i=0; i<4; i++){t+= a*NOISE(freq*st, SEED);freq*=2;a*=G;}
+#define FBM(NOISE, SEED) float G=uGain; float freq = 1.0; float a = 1.0; float t = 0.0;for(int i=0; i<8; i++){t+= a*NOISE(freq*st, SEED);freq*=uLacunarity;a*=G;}
 
 
 float monoSimplex(vec3 st, float seed){ 
@@ -753,54 +756,54 @@ vec4 rgbSimplex(vec3 st, float seed){
 }
 
 
-// vec2 displace(vec2 st, vec2 vector, float scale){
-//     vec2 offset = vec2(0.5);
-//     vec2 midpoint = vec2(0.5);
-//     vec2 uvi = st + scale * (vector.xy - midpoint.xy); 
-//   return uvi;
-// }
+vec2 displace(vec2 st, vec2 vector, float scale){
+    vec2 offset = vec2(0.5);
+    vec2 midpoint = vec2(0.5);
+    vec2 uvi = st + scale * (vector.xy - midpoint.xy); 
+  return uvi;
+}
 
-// vec3 displace(vec3 st , vec2 vector, float scale){ //overload to pass vec3s
-//     vec2 offset = vec2(0.5);
-//     vec2 midpoint = vec2(0.5);
-//     vec2 uvi = st.xy * scale * (vector.xy);
-//   return vec3(uvi, st.z);
-// }
+vec3 displace(vec3 st , vec2 vector, float scale){ //overload to pass vec3s
+    vec2 offset = vec2(0.5);
+    vec2 midpoint = vec2(0.5);
+    vec2 uvi = st.xy * scale * (vector.xy);
+  return vec3(uvi, st.z);
+}
 
-// #define NOISE_RGB(NOISE, SEED) vec3 noiseRGB = vec3(NOISE(st, uSeed + SEED), NOISE(st, uSeed + 500.0 + SEED), NOISE(st, uSeed - 500.0 + SEED));
+#define NOISE_RGB(NOISE, SEED) vec3 noiseRGB = vec3(NOISE(st, uSeed + SEED), NOISE(st, uSeed + 500.0 + SEED), NOISE(st, uSeed - 500.0 + SEED));
 
-// vec3 displace(vec3 st , vec2 vector, vec2 offset, vec2 midpoint, float scale){ //overload to pass vec3s
-//     vec2 uvi = st.xy + scale * (vector.xy); 
-//   return vec3(uvi, st.z);
-// }
+vec3 displace(vec3 st , vec2 vector, vec2 offset, vec2 midpoint, float scale){ //overload to pass vec3s
+    vec2 uvi = st.xy + scale * (vector.xy); 
+  return vec3(uvi, st.z);
+}
 
-// float recursiveWarpNoise(vec3 st, float seed){
-//   float color = monoSimplex( st*st.x, 2.0) * monoSimplex(displace(st, st.xy, vec2(0.5), vec2(0.5), 0.1));
-//   for(int i = 0; i<5; i++){
-//     NOISE_RGB(monoSimplex, 2.4);
+float recursiveWarpNoise(vec3 st, float seed){
+  float color = monoSimplex( st*st.x, 2.0) * monoSimplex(displace(st, st.xy, vec2(0.5), vec2(0.5), 0.1));
+  for(int i = 0; i<5; i++){
+    NOISE_RGB(monoSimplex, 2.4);
 
-//     color = monoSimplex(displace(st, noiseRGB.rg*float(i)/5.0, vec2(.5), vec2(0.5), 0.05*float(i)), seed*float(i));
-//   }
-//   return color;
-// }
+    color = monoSimplex(displace(st, noiseRGB.rg*float(i)/5.0, vec2(.5), vec2(0.5), 0.05*float(i)), seed*float(i));
+  }
+  return color;
+}
 
-// float ang(vec3 st){
-//   return sin(st.y*st.x);
-// }
+float ang(vec3 st){
+  return sin(st.y*st.x);
+}
 
 
-// float dis(vec3 st){
-//   float d = grid(vUV, 7.0, 0.45, PI/4.);
-//   // d = texture(sTD2DInputs[0],vUV.st).r;
-//   FBM(monoSimplex, -743.4838)
-//   return d *t;
-// }
+float dis(vec3 st){
+  float d = grid(vUv, 7.0, 0.45, PI/4.);
+  // d = texture(sTD2DInputs[0],vUv).r;
+  FBM(monoSimplex, -743.4838)
+  return d *t;
+}
 
-// float dis2(vec3 st){
-//   NOISE_RGB(monoSimplex, 2.4);
-//   FBM(recursiveWarpNoise, 2.4);
-//   return t;
-// }
+float dis2(vec3 st){
+  NOISE_RGB(monoSimplex, 2.4);
+  FBM(recursiveWarpNoise, 2.4);
+  return t;
+}
 
 
 #define EPSILON 0.0001
@@ -830,7 +833,9 @@ void main()
 {
     //create vec3 with z value for translate
     vec3 st = vec3(vUv, 0.0);
-    vec4 color = fbm(st, uSeed); 
+    NOISE_RGB(monoSimplex, 2.4);
+    FBM(recursiveWarpNoise, 2.4);
+    vec4 color = vec4(noiseRGB*t,1); 
     //output
     gl_FragColor = (color);
 
@@ -1741,6 +1746,9 @@ function step (dt) {
     gl.uniform1f(noiseProgram.uniforms.uSeed, noiseSeed); 
     gl.uniform1f(noiseProgram.uniforms.uExponent, config.EXPONENT); 
     gl.uniform1f(noiseProgram.uniforms.uRidgeThreshold, config.RIDGE); 
+    gl.uniform1f(noiseProgram.uniforms.uLacunarity, config.LACUNARITY); 
+    gl.uniform1f(noiseProgram.uniforms.uGain, config.GAIN); 
+    gl.uniform1f(noiseProgram.uniforms.uOctaves, config.OCTAVES); 
     gl.uniform3f(noiseProgram.uniforms.uScale, 1., 1., 1.); 
     gl.uniform1f(noiseProgram.uniforms.uAspect, config.ASPECT); 
     blit(noise.write);
