@@ -55,10 +55,10 @@ let config = {
     SIM_RESOLUTION: 256, //simres
     DYE_RESOLUTION: 1024, //output res 
     ASPECT: 1.0,
-    FLOW: 0.05,
+    FLOW: 0.5,
     VELOCITYSCALE: 1.0,
     CAPTURE_RESOLUTION: 512, //screen capture res 
-    DENSITY_DISSIPATION: 2.5, //def need to figure out this one, think perhaps bc im squaring the color in splatColor
+    DENSITY_DISSIPATION: .05, //def need to figure out this one, think perhaps bc im squaring the color in splatColor
     VELOCITY_DISSIPATION: 2.15,
     PRESSURE: 0.8,
     PRESSURE_ITERATIONS: 30,
@@ -81,18 +81,18 @@ let config = {
     SUNRAYS_RESOLUTION: 196,
     SUNRAYS_WEIGHT: 0.5,
     FORCE_MAP_ENABLE: true,
-    DENSITY_MAP_ENABLE: true, 
+    DENSITY_MAP_ENABLE: false, 
     COLOR_MAP_ENABLE:true,
     EXPONENT: 1.0,
     PERIOD: 3.0,
     RIDGE: 1.0,
     AMP: 1.0,
-    LACUNARITY: 1.0,
+    LACUNARITY: 2.0,
     GAIN: 0.5,
     OCTAVES: 4,
     MONO: false,
-    NOISE_TRANSLATE_SPEED: 0.25,
-    DISPLAY_FLUID: false
+    NOISE_TRANSLATE_SPEED: 0.15,
+    DISPLAY_FLUID: true
 }
 
 
@@ -238,16 +238,16 @@ function supportRenderTextureFormat (gl, internalFormat, format, type) {
 }
 
 
-function bindForceWithDensityMap () {
-    if (config.FORCE_MAP_ENABLE) config.DENSITY_MAP_ENABLE = true;
-}
+// function bindForceWithDensityMap () {
+//     if (config.FORCE_MAP_ENABLE) config.DENSITY_MAP_ENABLE = true;
+// }
 
 function startGUI () {
     const parName = 'quality_31';
     //dat is a library developed by Googles Data Team for building JS interfaces. Needs to be included in project directory 
     var gui = new dat.GUI({ width: 300 });
 
-    gui.add(config, 'DISPLAY_FLUID').name('Display Fluid // Noise');
+    gui.add(config, 'DISPLAY_FLUID').name('Render Fluid <> Vel Map');
 
     let fluidFolder = gui.addFolder('Fluid Settings');
     fluidFolder.add(config, 'DYE_RESOLUTION', { 'high': 1024, 'medium': 512, 'low': 256, 'very low': 128 }).name(parName).onFinishChange(initFramebuffers);
@@ -267,8 +267,8 @@ function startGUI () {
     
     
     let mapFolder = gui.addFolder('Maps');
-    mapFolder.add(config, 'FORCE_MAP_ENABLE').name('force map enable').onFinishChange(bindForceWithDensityMap);
-    mapFolder.add(config, 'DENSITY_MAP_ENABLE').name('density map enable').listen(); //adding listen() will update the ui if the parameter value changes elsewhere in the program 
+    mapFolder.add(config, 'FORCE_MAP_ENABLE').name('force map enable');
+    mapFolder.add(config, 'DENSITY_MAP_ENABLE').name('density map enable'); //adding listen() will update the ui if the parameter value changes elsewhere in the program 
     // mapFolder.add(config, 'COLOR_MAP_ENABLE').name('color map enable');
 
     let noiseFolder = gui.addFolder('Velocity Map');
@@ -816,13 +816,13 @@ float dis2(vec3 st){
 //vec4[] palette = {vec4(.875, .0859375, 0.16796875, 1.0), vec4(1.), vec4(0,.3203125, 0.64453125, 1.0), vec4(0.0, 0.0, 0.0, 1.0), vec4(1.0, 1.0, 1.0, 1.0)};
 
 vec4 fbm(vec3 st, float seed){
-    float G=0.5; 
+    float G=uGain; 
     float freq = 1.0; 
     float a = 1.0; 
     vec4 t = vec4(0.0);
-    for(int i=0; i<4; i++){
+    for(int i=0; i<8; i++){
     t += a*rgbSimplex(freq*st, seed);
-    freq*= 2.0;
+    freq*= uLacunarity;
     //freq = pow(2.0, float(i));
     a*=G;
     }
@@ -834,8 +834,8 @@ void main()
     //create vec3 with z value for translate
     vec3 st = vec3(vUv, 0.0);
     NOISE_RGB(monoSimplex, 2.4);
-    FBM(recursiveWarpNoise, 2.4);
-    vec4 color = vec4(noiseRGB*t,1); 
+    // FBM(recursiveWarpNoise, 2.4);
+    vec4 color = fbm(st, uSeed); 
     //output
     gl_FragColor = (color);
 
@@ -1153,7 +1153,7 @@ const splatVelShader = compileShader(gl.FRAGMENT_SHADER, `
         vec2 p = vUv - point.xy;
         p.x *= aspectRatio;
         vec3 splat = vec3(0.0);
-        splat = smoothstep(0.0, 1.0, texture2D(uDensityMap, vUv).xyz) * (normalize(texture2D(uForceMap, vUv).rgb)) * uVelocityScale;
+        splat = smoothstep(0.0, 1.0, texture2D(uDensityMap, vUv).xyz) * (normalize(texture2D(uForceMap, vUv).rgb)*2.0-1.0) * uVelocityScale;
         splat.z = 0.0;
         vec3 base = texture2D(uTarget, vUv).xyz;
         gl_FragColor = vec4(base + splat, 1.0);
@@ -1434,8 +1434,8 @@ let noise;
 
 //load texture for dithering
 let ditheringTexture = createTextureAsync('LDR_LLL1_0.png');
-// let picture = createTextureAsync('img/flowers_fence.JPG');
-let picture = createTextureAsync('img/lake-heckaman-IMG_0997-dec-2022.jpg');
+let picture = createTextureAsync('img/flowers_fence.JPG');
+// let picture = createTextureAsync('img/lake-heckaman-IMG_0997-dec-2022.jpg');
 // console.log('loaded picture successfully');
 
 //create all our shader programs 
