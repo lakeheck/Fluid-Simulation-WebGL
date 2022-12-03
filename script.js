@@ -55,11 +55,11 @@ let config = {
     SIM_RESOLUTION: 256, //simres
     DYE_RESOLUTION: 1024, //output res 
     ASPECT: 1.0,
-    FLOW: 0.05,
+    FLOW: 0.005,
     SPLAT_FLOW: 0.5,
     VELOCITYSCALE: 1.0,
     CAPTURE_RESOLUTION: 1024, //screen capture res 
-    DENSITY_DISSIPATION: .05, //def need to figure out this one, think perhaps bc im squaring the color in splatColor
+    DENSITY_DISSIPATION: .5, //def need to figure out this one, think perhaps bc im squaring the color in splatColor
     VELOCITY_DISSIPATION: 2.15,
     PRESSURE: 0.8,
     PRESSURE_ITERATIONS: 30,
@@ -82,7 +82,7 @@ let config = {
     SUNRAYS_RESOLUTION: 196,
     SUNRAYS_WEIGHT: 0.5,
     FORCE_MAP_ENABLE: true,
-    DENSITY_MAP_ENABLE: false, 
+    DENSITY_MAP_ENABLE: true, 
     COLOR_MAP_ENABLE:true,
     EXPONENT: 1.0,
     PERIOD: 3.0,
