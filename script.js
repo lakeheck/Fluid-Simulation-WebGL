@@ -55,11 +55,11 @@ let config = {
     SIM_RESOLUTION: 256, //simres
     DYE_RESOLUTION: 1024, //output res 
     ASPECT: 1.0,
-    FLOW: 0.005,
+    FLOW: 0.0066,
     SPLAT_FLOW: 0.5,
     VELOCITYSCALE: 1.0,
     CAPTURE_RESOLUTION: 1024, //screen capture res 
-    DENSITY_DISSIPATION: .5, //def need to figure out this one, think perhaps bc im squaring the color in splatColor
+    DENSITY_DISSIPATION: .85, //def need to figure out this one, think perhaps bc im squaring the color in splatColor
     VELOCITY_DISSIPATION: 2.15,
     PRESSURE: 0.8,
     PRESSURE_ITERATIONS: 30,
@@ -80,7 +80,7 @@ let config = {
     BLOOM_SOFT_KNEE: 0.7,
     SUNRAYS: true,
     SUNRAYS_RESOLUTION: 196,
-    SUNRAYS_WEIGHT: 0.5,
+    SUNRAYS_WEIGHT: 0.4,
     FORCE_MAP_ENABLE: true,
     DENSITY_MAP_ENABLE: true, 
     COLOR_MAP_ENABLE:true,
@@ -291,7 +291,7 @@ function startGUI () {
 
     let sunraysFolder = gui.addFolder('Sunrays');
     sunraysFolder.add(config, 'SUNRAYS').name('enabled').onFinishChange(updateKeywords);
-    sunraysFolder.add(config, 'SUNRAYS_WEIGHT', 0.3, 1.0).name('weight');
+    sunraysFolder.add(config, 'SUNRAYS_WEIGHT', 0.01, 1.0).name('weight');
 
     let captureFolder = gui.addFolder('Capture');
     captureFolder.addColor(config, 'BACK_COLOR').name('background color');
@@ -1183,7 +1183,9 @@ const splatColorShader = compileShader(gl.FRAGMENT_SHADER, `
         p.x *= aspectRatio;
 
         vec3 splat = vec3(0);
-        splat = texture2D(uDensityMap, vUv).xyz * texture2D(uColor, vUv).xyz;  
+        splat = texture2D(uColor, vUv).xyz;  
+        // splat = texture2D(uDensityMap, vUv).xyz * texture2D(uColor, vUv).xyz;  
+
         splat = smoothstep(0.0, 1.0, splat);
         splat *= uFlow;
         vec3 base = texture2D(uTarget, vUv).xyz;
