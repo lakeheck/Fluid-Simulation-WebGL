@@ -9,9 +9,6 @@
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="mobile-web-app-capable" content="yes">
 
-        <link rel="apple-touch-icon" href="logo.png">
-        <link rel="icon" href="logo.png">
-
         <title>WebGL Fluid Simulation</title>
         <meta name="description" content="A WebGL fluid simulation">
 
@@ -19,7 +16,6 @@
         <meta property="og:title" content="WebGL Fluid Simulation">
         <meta property="og:description" content="A WebGL fluid simulation">
         <meta property="og:url" content="https://lakeheck.github.io/Fluid-Simulation-WebGL/">
-        <meta property="og:image" content="">
 
         <script type="text/javascript" src="./libs/dat.gui.min.js"></script>
         <style>
@@ -47,15 +43,13 @@
             canvas {
                 width: 100%;
                 height: 100%;
+                display: block;
             }
+
 
         </style>
         <script>
-            window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
-            ga('create', '', 'auto');
-            ga('send', 'pageview');
         </script>
-        <script async src="https://www.google-analytics.com/analytics.js"></script>
     </head>
     <body>
         <canvas></canvas>
