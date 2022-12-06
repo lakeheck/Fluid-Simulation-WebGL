@@ -612,11 +612,6 @@ export class Fluid{
         sunraysFolder.add(config, 'SUNRAYS').name('enabled').onFinishChange(this.updateKeywords);
         sunraysFolder.add(config, 'SUNRAYS_WEIGHT', 0.01, 1.0).name('weight');
     
-        // let captureFolder = gui.addFolder('Capture');
-        // captureFolder.addColor(config, 'BACK_COLOR').name('background color');
-        // captureFolder.add(config, 'TRANSPARENT').name('transparent');
-        // captureFolder.add({ fun: this.captureScreenshot(this) }, 'fun').name('take screenshot');
-    
         //create a function to assign to a button, here linking my github
         let github = gui.add({ fun : () => {
             window.open('https://github.com/lakeheck/Fluid-Simulation-WebGL');
@@ -631,24 +626,6 @@ export class Fluid{
         if (LGL.isMobile())
             gui.close();
     }
-
-    // captureScreenshot () {
-    //     let res = LGL.getResolution(config.CAPTURE_RESOLUTION);
-    //     //use helper fxn to create frame buffer to render for screenshot 
-    //     let target = LGL.createFBO(res.width, res.height, ext.formatRGBA.internalFormat, ext.formatRGBA.format, ext.halfFloatTexType, gl.NEAREST);
-    //     LGL.blit(target);
-    
-    //     //create a texture from the frame buffer 
-    //     let texture = LGL.framebufferToTexture(target);
-    //     texture = LGL.normalizeTexture(texture, target.width, target.height);
-    
-    //     let captureCanvas = LGL.textureToCanvas(texture, target.width, target.height);
-    //     let datauri = captureCanvas.toDataURL();
-    //     //use helper fxn to download data 
-    //     LGL.downloadURI('fluid.png', datauri);
-    //     //tell browser we can forget about this url
-    //     URL.revokeObjectURL(datauri);
-    // }
 }
 
 
