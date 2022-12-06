@@ -1627,7 +1627,7 @@ function updateKeywords () {
 
 
 //actually calling our functions to make program work 
-updateKeywords();
+udpdateKeywords();
 initFramebuffers();
 multipleSplats(parseInt(Math.random() * 20) + 5);
 let noiseSeed = 0.0; 
