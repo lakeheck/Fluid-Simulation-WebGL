@@ -2,8 +2,9 @@
 'use strict';
 
 // Mobile promo section
-
+import {gl , ext, canvas } from "./js/WebGL.js";
 import {config} from "./js/config.js";
+import {Fluid} from "./js/Fluid.js";
 //accesss element by searching html tree 
 const promoPopup = document.getElementsByClassName('promo')[0];
 const promoPopupClose = document.getElementsByClassName('promo-close')[0];
@@ -43,11 +44,12 @@ const promoPopupClose = document.getElementsByClassName('promo-close')[0];
 // Simulation section
 
 //this is like selenium, where the fxn will return a list of elements that meet your search criteria 
-const canvas = document.getElementsByTagName('canvas')[0];
+// const canvas = document.getElementsByTagName('canvas')[0];
 //function that will adjust canvas bounds in case screen size changes 
 resizeCanvas();
 
-
+let f = new Fluid(gl);
+console.log(f);
 
 
 //inital config for sim params
@@ -76,7 +78,7 @@ let splatStack = [];
 pointers.push(new pointerPrototype());
 
 //create webgl context 
-const { gl, ext } = getWebGLContext(canvas);
+// const { gl, ext } = getWebGLContext(canvas);
 
 //set output res on mobile 
 if (isMobile()) {
