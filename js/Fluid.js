@@ -562,7 +562,93 @@ export class Fluid{
         });
     }
 
+    startGUI () {
+        const parName = 'Output Resolution';
+        //dat is a library developed by Googles Data Team for building JS interfaces. Needs to be included in project directory 
+        var gui = new dat.GUI({ width: 300 });
+    
+        gui.add(config, 'DISPLAY_FLUID').name('Render Fluid <> Vel Map');
+    
+        let fluidFolder = gui.addFolder('Fluid Settings');
+        fluidFolder.add(config, 'DYE_RESOLUTION', { 'high': 1024, 'medium': 512, 'low': 256, 'very low': 128 }).name(parName).onFinishChange(this.initFramebuffers);
+        fluidFolder.add(config, 'SIM_RESOLUTION', { '32': 32, '64': 64, '128': 128, '256': 256 }).name('Sim Resolution').onFinishChange(this.initFramebuffers);
+        fluidFolder.add(config, 'DENSITY_DISSIPATION', 0, 4.0).name('Density Diffusion');
+        fluidFolder.add(config, 'FLOW', 0, 0.5).name('Flow');
+        fluidFolder.add(config, 'SPLAT_FLOW', 0, 1).name('Splat Flow');
+        fluidFolder.add(config, 'VELOCITY_DISSIPATION', 0, 4.0).name('Velocity Diffusion');
+        fluidFolder.add(config, 'VELOCITYSCALE', 0, 10.0).name('Velocity Scale');
+        fluidFolder.add(config, 'PRESSURE', 0.0, 1.0).name('Pressure');
+        fluidFolder.add(config, 'CURL', 0, 50).name('Vorticity').step(1);
+        fluidFolder.add(config, 'SPLAT_RADIUS', 0.01, 1.0).name('Splat Radius');
+        fluidFolder.add(config, 'SHADING').name('Shading').onFinishChange(this.updateKeywords);
+        fluidFolder.add(config, 'PAUSED').name('Paused').listen();
+        fluidFolder.add({ fun: () => {
+            splatStack.push(parseInt(Math.random() * 20) + 5);
+        } }, 'fun').name('Random splats');
+        
+        
+        let mapFolder = gui.addFolder('Maps');
+        mapFolder.add(config, 'FORCE_MAP_ENABLE').name('force map enable');
+        mapFolder.add(config, 'DENSITY_MAP_ENABLE').name('density map enable'); //adding listen() will update the ui if the parameter value changes elsewhere in the program 
+        // mapFolder.add(config, 'COLOR_MAP_ENABLE').name('color map enable');
+    
+        let noiseFolder = gui.addFolder('Velocity Map');
+        noiseFolder.add(config, 'PERIOD', 0, 10.0).name('Period');
+        noiseFolder.add(config, 'EXPONENT', 0, 4.0).name('Exponent');
+        noiseFolder.add(config, 'RIDGE', 0, 1.5).name('Ridge');
+        noiseFolder.add(config, 'AMP', 0, 4.0).name('Amplitude');
+        noiseFolder.add(config, 'LACUNARITY', 0, 4).name('Lacunarity');
+        noiseFolder.add(config, 'NOISE_TRANSLATE_SPEED', 0, 2).name('Noise Translate Speed');
+        noiseFolder.add(config, 'GAIN', 0.0, 1.0).name('Gain');
+        noiseFolder.add(config, 'OCTAVES', 0, 8).name('Octaves').step(1);
+        noiseFolder.add(config, 'MONO').name('Mono');
+    
+        // let bloomFolder = gui.addFolder('Bloom');
+        // bloomFolder.add(config, 'BLOOM').name('enabled').onFinishChange(updateKeywords);
+        // bloomFolder.add(config, 'BLOOM_INTENSITY', 0.1, 2.0).name('intensity');
+        // bloomFolder.add(config, 'BLOOM_THRESHOLD', 0.0, 1.0).name('threshold');
+    
+        let sunraysFolder = gui.addFolder('Sunrays');
+        sunraysFolder.add(config, 'SUNRAYS').name('enabled').onFinishChange(this.updateKeywords);
+        sunraysFolder.add(config, 'SUNRAYS_WEIGHT', 0.01, 1.0).name('weight');
+    
+        let captureFolder = gui.addFolder('Capture');
+        captureFolder.addColor(config, 'BACK_COLOR').name('background color');
+        captureFolder.add(config, 'TRANSPARENT').name('transparent');
+        // captureFolder.add({ fun: this.captureScreenshot(this) }, 'fun').name('take screenshot');
+    
+        //create a function to assign to a button, here linking my github
+        let github = gui.add({ fun : () => {
+            window.open('https://github.com/lakeheck/Fluid-Simulation-WebGL');
+            ga('send', 'event', 'link button', 'github');
+        } }, 'fun').name('Github');
+        github.__li.className = 'cr function bigFont';
+        github.__li.style.borderLeft = '3px solid #8C8C8C';
+        let githubIcon = document.createElement('span');
+        github.domElement.parentElement.appendChild(githubIcon);
+        githubIcon.className = 'icon github';
+    
+        if (LGL.isMobile())
+            gui.close();
+    }
 
+    // captureScreenshot () {
+    //     let res = LGL.getResolution(config.CAPTURE_RESOLUTION);
+    //     //use helper fxn to create frame buffer to render for screenshot 
+    //     let target = LGL.createFBO(res.width, res.height, ext.formatRGBA.internalFormat, ext.formatRGBA.format, ext.halfFloatTexType, gl.NEAREST);
+    //     this.render(target => this.render(target));
+    
+    //     //create a texture from the frame buffer 
+    //     let texture = LGL.framebufferToTexture(target);
+    //     texture = LGL.normalizeTexture(texture, target.width, target.height);
+    
+    //     let captureCanvas = LGL.textureToCanvas(texture, target.width, target.height);
+    //     let datauri = captureCanvas.toDataURL();
+    //     //use helper fxn to download data 
+    //     LGL.downloadURI('fluid.png', datauri);
+    //     //tell browser we can forget about this url
+    //     URL.revokeObjectURL(datauri);
+    // }
 }
 
 

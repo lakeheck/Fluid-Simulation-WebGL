@@ -10,7 +10,9 @@ import * as LGL from "./js/WebGL.js";
 
 LGL.resizeCanvas();
 
+
 let fluid = new Fluid(gl);
+fluid.startGUI();
 // console.log(f);
 fluid.simulate();
 

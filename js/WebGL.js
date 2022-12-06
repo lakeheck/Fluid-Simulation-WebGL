@@ -618,3 +618,25 @@ export function resizeCanvas () {
     return false;
 }
 
+export function isMobile () {
+    return /Mobi|Android/i.test(navigator.userAgent);
+}
+
+
+export function captureScreenshot () {
+    let res = getResolution(config.CAPTURE_RESOLUTION);
+    //use helper fxn to create frame buffer to render for screenshot 
+    let target = createFBO(res.width, res.height, ext.formatRGBA.internalFormat, ext.formatRGBA.format, ext.halfFloatTexType, gl.NEAREST);
+    render(target);
+
+    //create a texture from the frame buffer 
+    let texture = framebufferToTexture(target);
+    texture = normalizeTexture(texture, target.width, target.height);
+
+    let captureCanvas = textureToCanvas(texture, target.width, target.height);
+    let datauri = captureCanvas.toDataURL();
+    //use helper fxn to download data 
+    downloadURI('fluid.png', datauri);
+    //tell browser we can forget about this url
+    URL.revokeObjectURL(datauri);
+}
