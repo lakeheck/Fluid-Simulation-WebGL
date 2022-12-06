@@ -1,7 +1,6 @@
 
 'use strict';
 
-// Mobile promo section
 import {gl , ext, canvas } from "./js/WebGL.js";
 import {config} from "./js/config.js";
 import {Fluid} from "./js/Fluid.js";
@@ -13,9 +12,10 @@ LGL.resizeCanvas();
 
 let fluid = new Fluid(gl);
 fluid.startGUI();
-// console.log(f);
 fluid.simulate();
 
+
+/////// listeners and helper fxns to add pointers /////////
 
 canvas.addEventListener('mousedown', e => {
     let posX = LGL.scaleByPixelRatio(e.offsetX);

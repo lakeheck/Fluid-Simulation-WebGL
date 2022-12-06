@@ -89,7 +89,7 @@ export class Fluid{
         if (this.velocity == null)
             this.velocity = LGL.createDoubleFBO(simRes.width, simRes.height, rg.internalFormat, rg.format, texType, filtering);
         else //resize if needed 
-            this.velocity = LGL.resizeDoubleFBO(velocity, simRes.width, simRes.height, rg.internalFormat, rg.format, texType, filtering);
+            this.velocity = LGL.resizeDoubleFBO(this.velocity, simRes.width, simRes.height, rg.internalFormat, rg.format, texType, filtering);
         //other buffer objects that dont need feedback / ping-pong 
         //notice the filtering type is set to gl.NEAREST meaning we grab just a single px, no filtering 
         this.divergence = LGL.createFBO      (simRes.width, simRes.height, r.internalFormat, r.format, texType, gl.NEAREST);

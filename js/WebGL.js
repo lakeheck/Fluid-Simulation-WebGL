@@ -97,8 +97,21 @@ void main () {
 }
 `);
 
+export const copyShader = compileShader(gl.FRAGMENT_SHADER, `
+precision mediump float;
+precision mediump sampler2D;
+
+varying highp vec2 vUv;
+uniform sampler2D uTexture;
+
+void main () {
+    gl_FragColor = texture2D(uTexture, vUv);
+}
+`);
+
 const colorProgram              = new Program(baseVertexShader, colorShader);
 const checkerboardProgram       = new Program(baseVertexShader, checkerboardShader);
+const copyProgram       = new Program(baseVertexShader, checkerboardShader);
 
 
 export function getSupportedFormat (gl, internalFormat, format, type)
