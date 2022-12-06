@@ -5,9 +5,13 @@
 import {gl , ext, canvas } from "./js/WebGL.js";
 import {config} from "./js/config.js";
 import {Fluid} from "./js/Fluid.js";
+
+
 //accesss element by searching html tree 
 const promoPopup = document.getElementsByClassName('promo')[0];
 const promoPopupClose = document.getElementsByClassName('promo-close')[0];
+
+resizeCanvas();
 
 
 ////////////////////////////////////////////////////////////////    KEEPING THE BELOW FOR REFERENCE BUT NOT USED IN THIS PROJECT ///////////////////////////////////////////////
@@ -50,6 +54,7 @@ resizeCanvas();
 
 let f = new Fluid(gl);
 console.log(f);
+f.simulate();
 
 
 //inital config for sim params
@@ -95,60 +100,60 @@ if (!ext.supportLinearFiltering) {
 //start gui
 startGUI();
 
-function getWebGLContext (canvas) {
-    const params = { alpha: true, depth: false, stencil: false, antialias: false, preserveDrawingBuffer: false };
+// function getWebGLContext (canvas) {
+//     const params = { alpha: true, depth: false, stencil: false, antialias: false, preserveDrawingBuffer: false };
 
-    //get webgl context. note webgl2
-    let gl = canvas.getContext('webgl2', params);
-    const isWebGL2 = !!gl;
-    if (!isWebGL2)
-        gl = canvas.getContext('webgl', params) || canvas.getContext('experimental-webgl', params);
+//     //get webgl context. note webgl2
+//     let gl = canvas.getContext('webgl2', params);
+//     const isWebGL2 = !!gl;
+//     if (!isWebGL2)
+//         gl = canvas.getContext('webgl', params) || canvas.getContext('experimental-webgl', params);
 
-    //find out if our current webgl context supports certain features 
-    let halfFloat;
-    let supportLinearFiltering;
-    if (isWebGL2) {
-        gl.getExtension('EXT_color_buffer_float');
-        supportLinearFiltering = gl.getExtension('OES_texture_float_linear');
-    } else {
-        halfFloat = gl.getExtension('OES_texture_half_float');
-        supportLinearFiltering = gl.getExtension('OES_texture_half_float_linear');
-    }
+//     //find out if our current webgl context supports certain features 
+//     let halfFloat;
+//     let supportLinearFiltering;
+//     if (isWebGL2) {
+//         gl.getExtension('EXT_color_buffer_float');
+//         supportLinearFiltering = gl.getExtension('OES_texture_float_linear');
+//     } else {
+//         halfFloat = gl.getExtension('OES_texture_half_float');
+//         supportLinearFiltering = gl.getExtension('OES_texture_half_float_linear');
+//     }
 
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+//     gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
-    const halfFloatTexType = isWebGL2 ? gl.HALF_FLOAT : halfFloat.HALF_FLOAT_OES;
-    let formatRGBA;
-    let formatRG;
-    let formatR;
+//     const halfFloatTexType = isWebGL2 ? gl.HALF_FLOAT : halfFloat.HALF_FLOAT_OES;
+//     let formatRGBA;
+//     let formatRG;
+//     let formatR;
 
-    if (isWebGL2)//believe this is standardizing texture pixel format (aliases) based on webgl version
-    {
-        formatRGBA = getSupportedFormat(gl, gl.RGBA16F, gl.RGBA, halfFloatTexType);
-        formatRG = getSupportedFormat(gl, gl.RG16F, gl.RG, halfFloatTexType);
-        formatR = getSupportedFormat(gl, gl.R16F, gl.RED, halfFloatTexType);
-    }
-    else
-    {
-        formatRGBA = getSupportedFormat(gl, gl.RGBA, gl.RGBA, halfFloatTexType);
-        formatRG = getSupportedFormat(gl, gl.RGBA, gl.RGBA, halfFloatTexType);
-        formatR = getSupportedFormat(gl, gl.RGBA, gl.RGBA, halfFloatTexType);
-    }
+//     if (isWebGL2)//believe this is standardizing texture pixel format (aliases) based on webgl version
+//     {
+//         formatRGBA = getSupportedFormat(gl, gl.RGBA16F, gl.RGBA, halfFloatTexType);
+//         formatRG = getSupportedFormat(gl, gl.RG16F, gl.RG, halfFloatTexType);
+//         formatR = getSupportedFormat(gl, gl.R16F, gl.RED, halfFloatTexType);
+//     }
+//     else
+//     {
+//         formatRGBA = getSupportedFormat(gl, gl.RGBA, gl.RGBA, halfFloatTexType);
+//         formatRG = getSupportedFormat(gl, gl.RGBA, gl.RGBA, halfFloatTexType);
+//         formatR = getSupportedFormat(gl, gl.RGBA, gl.RGBA, halfFloatTexType);
+//     }
 
-    //ga() is for sending data to Google Analytics 
-    ga('send', 'event', isWebGL2 ? 'webgl2' : 'webgl', formatRGBA == null ? 'not supported' : 'supported');
+//     //ga() is for sending data to Google Analytics 
+//     ga('send', 'event', isWebGL2 ? 'webgl2' : 'webgl', formatRGBA == null ? 'not supported' : 'supported');
 
-    return {
-        gl,
-        ext: {
-            formatRGBA,
-            formatRG,
-            formatR,
-            halfFloatTexType,
-            supportLinearFiltering
-        }
-    };
-}
+//     return {
+//         gl,
+//         ext: {
+//             formatRGBA,
+//             formatRG,
+//             formatR,
+//             halfFloatTexType,
+//             supportLinearFiltering
+//         }
+//     };
+// }
 
 function getSupportedFormat (gl, internalFormat, format, type)
 {
@@ -1627,13 +1632,13 @@ function updateKeywords () {
 
 
 //actually calling our functions to make program work 
-udpdateKeywords();
-initFramebuffers();
-multipleSplats(parseInt(Math.random() * 20) + 5);
-let noiseSeed = 0.0; 
-let lastUpdateTime = Date.now();
-let colorUpdateTimer = 0.0;
-update();
+// udpdateKeywords();
+// initFramebuffers();
+// multipleSplats(parseInt(Math.random() * 20) + 5);
+// let noiseSeed = 0.0; 
+// let lastUpdateTime = Date.now();
+// let colorUpdateTimer = 0.0;
+// update();
 
 
 //simulation step 
