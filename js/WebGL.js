@@ -640,3 +640,56 @@ export function captureScreenshot () {
     //tell browser we can forget about this url
     URL.revokeObjectURL(datauri);
 }
+
+export function framebufferToTexture (target) {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, target.fbo);
+    let length = target.width * target.height * 4; //take length time width, and multiply by 4 since we have 4 channels (rgba)
+    let texture = new Float32Array(length);
+    //webgl fxn that will read pixels into a textue (texture type needs to match passed pixel data type, eg gl.FLOAT and Float32Array)
+    gl.readPixels(0, 0, target.width, target.height, gl.RGBA, gl.FLOAT, texture);
+    return texture;
+}
+
+export function normalizeTexture (texture, width, height) {
+    let result = new Uint8Array(texture.length);
+    let id = 0;
+    for (let i = height - 1; i >= 0; i--) {
+        for (let j = 0; j < width; j++) {
+            let nid = i * width * 4 + j * 4;
+            result[nid + 0] = clamp01(texture[id + 0]) * 255;
+            result[nid + 1] = clamp01(texture[id + 1]) * 255;
+            result[nid + 2] = clamp01(texture[id + 2]) * 255;
+            result[nid + 3] = clamp01(texture[id + 3]) * 255;
+            id += 4;
+        }
+    }
+    return result;
+}
+
+export function clamp01 (input) {
+    return Math.min(Math.max(input, 0), 1);
+}
+
+export function textureToCanvas (texture, width, height) {
+    let captureCanvas = document.createElement('canvas');
+    let ctx = captureCanvas.getContext('2d');
+    captureCanvas.width = width;
+    captureCanvas.height = height;
+    //createImageData comes from the canvas 2d api
+    let imageData = ctx.createImageData(width, height);
+    //set data with our texture 
+    imageData.data.set(texture);
+    //render texture to canvas
+    ctx.putImageData(imageData, 0, 0);
+
+    return captureCanvas;
+}
+
+export function downloadURI (filename, uri) {
+    let link = document.createElement('a');
+    link.download = filename;
+    link.href = uri;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
