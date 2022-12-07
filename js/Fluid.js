@@ -88,7 +88,7 @@ export class Fluid{
         else {//resize if needed 
             this.dye = LGL.resizeDoubleFBO(this.dye, dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
             this.noise = LGL.resizeDoubleFBO(this.noise, dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
-            this.base = LGL.resizeDoubleFBO(this.noise, dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
+            this.base = LGL.resizeDoubleFBO(this.base, dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
 
         }
         if (this.velocity == null)
@@ -219,15 +219,15 @@ export class Fluid{
 
         gl.disable(gl.BLEND);
         this.baseProgram.bind();
-        gl.uniform1f(this.baseProgram.uniforms.uPeriod, config.PERIOD); 
+        gl.uniform1f(this.baseProgram.uniforms.uPeriod, config.ERRATA_PERIOD); 
         gl.uniform3f(this.baseProgram.uniforms.uTranslate, 0.0, 0.0, 0.0);
-        gl.uniform1f(this.baseProgram.uniforms.uAmplitude, config.AMP); 
+        gl.uniform1f(this.baseProgram.uniforms.uAmplitude, config.ERRATA_AMP); 
         gl.uniform1f(this.baseProgram.uniforms.uSeed, this.noiseSeed); 
-        gl.uniform1f(this.baseProgram.uniforms.uExponent, config.EXPONENT); 
-        gl.uniform1f(this.baseProgram.uniforms.uRidgeThreshold, config.RIDGE); 
-        gl.uniform1f(this.baseProgram.uniforms.uLacunarity, config.LACUNARITY); 
-        gl.uniform1f(this.baseProgram.uniforms.uGain, config.GAIN); 
-        gl.uniform1f(this.baseProgram.uniforms.uOctaves, config.OCTAVES); 
+        gl.uniform1f(this.baseProgram.uniforms.uExponent, config.ERRATA_EXPONENT); 
+        gl.uniform1f(this.baseProgram.uniforms.uRidgeThreshold, config.ERRATA_RIDGE); 
+        gl.uniform1f(this.baseProgram.uniforms.uLacunarity, config.ERRATA_LACUNARITY); 
+        gl.uniform1f(this.baseProgram.uniforms.uGain, config.ERRATA_GAIN); 
+        gl.uniform1f(this.baseProgram.uniforms.uOctaves, config.ERRATA_OCTAVES); 
         gl.uniform3f(this.baseProgram.uniforms.uScale, 1., 1., 1.); 
         gl.uniform1f(this.baseProgram.uniforms.uAspect, config.ASPECT); 
         LGL.blit(this.base.write);
@@ -506,7 +506,7 @@ export class Fluid{
         gl.uniform1f(this.splatColorClickProgram.uniforms.aspectRatio, canvas.width / canvas.height);
         gl.uniform2f(this.splatColorClickProgram.uniforms.point, x, y);
         gl.uniform1i(this.splatColorClickProgram.uniforms.uTarget, this.dye.read.attach(0));
-        gl.uniform1i(this.splatColorClickProgram.uniforms.uColor, this.picture.attach(1));
+        gl.uniform1i(this.splatColorClickProgram.uniforms.uColor, this.base.read.attach(1));
         gl.uniform1f(this.splatColorClickProgram.uniforms.radius, this.correctRadius(config.SPLAT_RADIUS / 100.0));
         LGL.blit(this.dye.write);
         this.dye.swap();
@@ -589,11 +589,11 @@ export class Fluid{
         //dat is a library developed by Googles Data Team for building JS interfaces. Needs to be included in project directory 
         var gui = new dat.GUI({ width: 300 });
     
-        gui.add(config, 'DISPLAY_FLUID').name('Render Fluid <> Vel Map');
+        gui.add(config, 'DISPLAY_FLUID').name('Display Fluid <> Color');
     
         let fluidFolder = gui.addFolder('Fluid Settings');
-        fluidFolder.add(config, 'DYE_RESOLUTION', { 'high': 1024, 'medium': 512, 'low': 256, 'very low': 128 }).name(parName).onFinishChange(this.initFramebuffers);
-        fluidFolder.add(config, 'SIM_RESOLUTION', { '32': 32, '64': 64, '128': 128, '256': 256 }).name('Sim Resolution').onFinishChange(this.initFramebuffers);
+        fluidFolder.add(config, 'DYE_RESOLUTION', { 'high': 1024, 'medium': 512, 'low': 256, 'very low': 128 }).name(parName).onFinishChange(this.initFramebuffers(this));
+        fluidFolder.add(config, 'SIM_RESOLUTION', { '32': 32, '64': 64, '128': 128, '256': 256 }).name('Sim Resolution').onFinishChange(this.initFramebuffers(this));
         fluidFolder.add(config, 'DENSITY_DISSIPATION', 0, 4.0).name('Density Diffusion');
         fluidFolder.add(config, 'FLOW', 0, 0.5).name('Flow');
         fluidFolder.add(config, 'SPLAT_FLOW', 0, 1).name('Splat Flow');
@@ -602,18 +602,23 @@ export class Fluid{
         fluidFolder.add(config, 'PRESSURE', 0.0, 1.0).name('Pressure');
         fluidFolder.add(config, 'CURL', 0, 50).name('Vorticity').step(1);
         fluidFolder.add(config, 'SPLAT_RADIUS', 0.01, 1.0).name('Splat Radius');
-        fluidFolder.add(config, 'SHADING').name('Shading').onFinishChange(this.updateKeywords);
+        // fluidFolder.add(config, 'SHADING').name('Shading').onFinishChange(this.updateKeywords(this));
         fluidFolder.add(config, 'PAUSED').name('Paused').listen();
-        fluidFolder.add({ fun: () => {
-            splatStack.push(parseInt(Math.random() * 20) + 5);
-        } }, 'fun').name('Random splats');
-        
-        
-        let mapFolder = gui.addFolder('Maps');
-        mapFolder.add(config, 'FORCE_MAP_ENABLE').name('force map enable');
-        mapFolder.add(config, 'DENSITY_MAP_ENABLE').name('density map enable'); //adding listen() will update the ui if the parameter value changes elsewhere in the program 
+        fluidFolder.add(config, 'FORCE_MAP_ENABLE').name('force map enable');
+        fluidFolder.add(config, 'DENSITY_MAP_ENABLE').name('density map enable'); //adding listen() will update the ui if the parameter value changes elsewhere in the program 
         // mapFolder.add(config, 'COLOR_MAP_ENABLE').name('color map enable');
     
+        let baseFolder = gui.addFolder('Base Color Map');
+        baseFolder.add(config, 'ERRATA_PERIOD', 0, 10.0).name('Period');
+        baseFolder.add(config, 'ERRATA_EXPONENT', 0, 4.0).name('Exponent');
+        baseFolder.add(config, 'ERRATA_RIDGE', 0, 1.5).name('Ridge');
+        baseFolder.add(config, 'ERRATA_AMP', 0, 4.0).name('Amplitude');
+        baseFolder.add(config, 'ERRATA_LACUNARITY', 0, 4).name('Lacunarity');
+        baseFolder.add(config, 'ERRATA_NOISE_TRANSLATE_SPEED', 0, 2).name('Noise Translate Speed');
+        baseFolder.add(config, 'ERRATA_GAIN', 0.0, 1.0).name('Gain');
+        baseFolder.add(config, 'ERRATA_OCTAVES', 0, 8).name('Octaves').step(1);
+
+
         let noiseFolder = gui.addFolder('Velocity Map');
         noiseFolder.add(config, 'PERIOD', 0, 10.0).name('Period');
         noiseFolder.add(config, 'EXPONENT', 0, 4.0).name('Exponent');
@@ -623,15 +628,8 @@ export class Fluid{
         noiseFolder.add(config, 'NOISE_TRANSLATE_SPEED', 0, 2).name('Noise Translate Speed');
         noiseFolder.add(config, 'GAIN', 0.0, 1.0).name('Gain');
         noiseFolder.add(config, 'OCTAVES', 0, 8).name('Octaves').step(1);
-        noiseFolder.add(config, 'MONO').name('Mono');
-    
-        // let bloomFolder = gui.addFolder('Bloom');
-        // bloomFolder.add(config, 'BLOOM').name('enabled').onFinishChange(updateKeywords);
-        // bloomFolder.add(config, 'BLOOM_INTENSITY', 0.1, 2.0).name('intensity');
-        // bloomFolder.add(config, 'BLOOM_THRESHOLD', 0.0, 1.0).name('threshold');
-    
-        let sunraysFolder = gui.addFolder('Sunrays');
-        sunraysFolder.add(config, 'SUNRAYS').name('enabled').onFinishChange(this.updateKeywords);
+
+        let sunraysFolder = gui.addFolder('Highlights');
         sunraysFolder.add(config, 'SUNRAYS_WEIGHT', 0.01, 1.0).name('weight');
     
         //create a function to assign to a button, here linking my github
