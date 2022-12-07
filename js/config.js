@@ -40,7 +40,6 @@ export const config = {
     OCTAVES: 4,
     MONO: false,
     NOISE_TRANSLATE_SPEED: 0.15,
-    DISPLAY_FLUID: true,
     ERRATA_EXPONENT: 2.5,
     ERRATA_PERIOD: 1.0,
     ERRATA_RIDGE: .9,
@@ -49,5 +48,11 @@ export const config = {
     ERRATA_GAIN: 0.4,
     ERRATA_OCTAVES: 4,
     ERRATA_NOISE_TRANSLATE_SPEED: 0.1,
-
+    DISPLAY_VELMAP: false,
+    DISPLAY_COLMAP: false,
+    DISPLAY_FLUID: true,
+    DISPLAY_VEL: false,
+    DISPLAY_CURL: false,
+    DISPLAY_DIV: false,
+    DISPLAY_PRES: false
 };

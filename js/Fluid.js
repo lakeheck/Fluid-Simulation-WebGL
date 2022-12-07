@@ -20,7 +20,7 @@ export class Fluid{
 
     splatStack = [];
 
-
+    gui;
     //create all our shader programs 
     blurProgram               = new LGL.Program(GLSL.blurVertexShader, GLSL.blurShader);
     copyProgram               = new LGL.Program(GLSL.baseVertexShader, GLSL.copyShader);
@@ -93,7 +93,6 @@ export class Fluid{
             this.dye = LGL.resizeDoubleFBO(this.dye, canvas.width, canvas.height, rgba.internalFormat, rgba.format, texType, filtering);
             this.noise = LGL.resizeDoubleFBO(this.noise, canvas.width, canvas.height, rgba.internalFormat, rgba.format, texType, filtering);
             this.base = LGL.resizeDoubleFBO(this.base, canvas.width, canvas.height, rgba.internalFormat, rgba.format, texType, filtering);
-
         }
         if (this.velocity == null)
             this.velocity = LGL.createDoubleFBO(simRes.width, simRes.height, rg.internalFormat, rg.format, texType, filtering);
@@ -156,6 +155,7 @@ export class Fluid{
     }
     
     simulate(){
+        this.update
         this.updateKeywords();
         this.initFramebuffers();
         this.multipleSplats(parseInt(Math.random() * 20) + 5);
@@ -177,7 +177,7 @@ export class Fluid{
         this.noiseSeed += dt * config.NOISE_TRANSLATE_SPEED;
         this.baseNoiseSeed += dt * config.ERRATA_NOISE_TRANSLATE_SPEED;
         if (LGL.resizeCanvas()) //resize if needed 
-            this.initFramebuffers();
+            // this.initFramebuffers();
         this.updateColors(dt); //step through our sim 
         this.applyInputs(); //take from ui
         if (!config.PAUSED)
@@ -369,12 +369,12 @@ export class Fluid{
             drawColor(target, LGL.normalizeColor(config.BACK_COLOR), this.colorProgram);
             if (target == null && config.TRANSPARENT)
             drawCheckerboard(target, this.checkerboardProgram);
-            if(config.DISPLAY_FLUID){
-                this.drawDisplay(target);
-            }
-            else{
-                this.drawDisplay(this.base);
-            }
+            // if(config.DISPLAY_FLUID){
+            this.drawDisplay(target);
+            // }
+            // else{
+            //     this.drawDisplay(this.base);
+            // }
             // LGL.blit(picture);
         
         }
@@ -592,14 +592,76 @@ export class Fluid{
         });
     }
 
+
+    // updateRenderTarget(){
+    //     if(config.DISPLAY_FLUID){
+    //         config.DISPLAY_VELMAP = false;
+    //         config.DISPLAY_COLMAP = false;
+    //         config.DISPLAY_VEL = false;
+    //         config.DISPLAY_CURL = false;
+    //         config.DISPLAY_DIV = false;
+    //         config.DISPLAY_PRES = false;
+    //     }
+    //     else if(config.DISPLAY_VELMAP){
+    //         config.DISPLAY_COLMAP = false;
+    //         config.DISPLAY_FLUID = false;
+    //         config.DISPLAY_VEL = false;
+    //         config.DISPLAY_CURL = false;
+    //         config.DISPLAY_DIV = false;
+    //         config.DISPLAY_PRES = false;
+    //     }
+    //     else if(config.DISPLAY_COLMAP){
+    //         config.DISPLAY_VELMAP = false;
+    //         config.DISPLAY_FLUID = false;
+    //         config.DISPLAY_VEL = false;
+    //         config.DISPLAY_CURL = false;
+    //         config.DISPLAY_DIV = false;
+    //         config.DISPLAY_PRES = false;
+    //     }
+    //     else if(config.DISPLAY_VEL){
+    //         config.DISPLAY_COLMAP = false;
+    //         config.DISPLAY_FLUID = false;
+    //         config.DISPLAY_VELMAP = false;
+    //         config.DISPLAY_CURL = false;
+    //         config.DISPLAY_DIV = false;
+    //         config.DISPLAY_PRES = false;
+    //     }
+    //     else if(config.DISPLAY_CURL){
+    //         config.DISPLAY_COLMAP = false;
+    //         config.DISPLAY_FLUID = false;
+    //         config.DISPLAY_VEL = false;
+    //         config.DISPLAY_VELMAP = false;
+    //         config.DISPLAY_DIV = false;
+    //         config.DISPLAY_PRES = false;
+    //     }
+    //     else if(config.DISPLAY_DIV){
+    //         config.DISPLAY_COLMAP = false;
+    //         config.DISPLAY_FLUID = false;
+    //         config.DISPLAY_VEL = false;
+    //         config.DISPLAY_VELMAP = false;
+    //         config.DISPLAY_CURL = false;
+    //         config.DISPLAY_PRES = false;
+    //     }
+    //     else if(config.DISPLAY_PRES){
+    //         config.DISPLAY_COLMAP = false;
+    //         config.DISPLAY_FLUID = false;
+    //         config.DISPLAY_VEL = false;
+    //         config.DISPLAY_VELMAP = false;
+    //         config.DISPLAY_DIV = false;
+    //         config.DISPLAY_CURL = false;
+    //     }
+    // }
+
     startGUI () {
         const parName = 'Output Resolution';
         //dat is a library developed by Googles Data Team for building JS interfaces. Needs to be included in project directory 
-        var gui = new dat.GUI({ width: 300 });
+        this.gui = new dat.GUI({ width: 300 });
     
-        gui.add(config, 'DISPLAY_FLUID').name('Display Fluid <> Color');
+        let viewFolder = this.gui.addFolder('View Settings');
+        viewFolder.add(config, 'SUNRAYS_WEIGHT', 0.01, 1.0).name('weight');
+        viewFolder.add(config, 'DISPLAY_FLUID').name('View Fluid <> Input Color');
     
-        let fluidFolder = gui.addFolder('Fluid Settings');
+        let fluidFolder = this.gui.addFolder('Fluid Settings');
         fluidFolder.add(config, 'DYE_RESOLUTION', { 'high': 1024, 'medium': 512, 'low': 256, 'very low': 128 }).name(parName).onFinishChange(this.initFramebuffers(this));
         fluidFolder.add(config, 'SIM_RESOLUTION', { '32': 32, '64': 64, '128': 128, '256': 256 }).name('Sim Resolution').onFinishChange(this.initFramebuffers(this));
         fluidFolder.add(config, 'DENSITY_DISSIPATION', 0, 4.0).name('Density Diffusion');
@@ -616,7 +678,7 @@ export class Fluid{
         fluidFolder.add(config, 'DENSITY_MAP_ENABLE').name('density map enable'); //adding listen() will update the ui if the parameter value changes elsewhere in the program 
         // mapFolder.add(config, 'COLOR_MAP_ENABLE').name('color map enable');
     
-        let baseFolder = gui.addFolder('Base Color Map');
+        let baseFolder = this.gui.addFolder('Base Color Map');
         baseFolder.add(config, 'ERRATA_PERIOD', 0, 4.0).name('Period');
         baseFolder.add(config, 'ERRATA_EXPONENT', 1, 4.0).name('Exponent');
         baseFolder.add(config, 'ERRATA_RIDGE', 0.5, 1.5).name('Ridge');
@@ -627,7 +689,7 @@ export class Fluid{
         baseFolder.add(config, 'ERRATA_OCTAVES', 0, 8).name('Octaves').step(1);
 
 
-        let noiseFolder = gui.addFolder('Velocity Map');
+        let noiseFolder = this.gui.addFolder('Velocity Map');
         noiseFolder.add(config, 'PERIOD', 0, 10.0).name('Period');
         noiseFolder.add(config, 'EXPONENT', 0, 4.0).name('Exponent');
         noiseFolder.add(config, 'RIDGE', 0, 1.5).name('Ridge');
@@ -637,11 +699,9 @@ export class Fluid{
         noiseFolder.add(config, 'GAIN', 0.0, 1.0).name('Gain');
         noiseFolder.add(config, 'OCTAVES', 0, 8).name('Octaves').step(1);
 
-        let sunraysFolder = gui.addFolder('Highlights');
-        sunraysFolder.add(config, 'SUNRAYS_WEIGHT', 0.01, 1.0).name('weight');
     
         //create a function to assign to a button, here linking my github
-        let github = gui.add({ fun : () => {
+        let github = this.gui.add({ fun : () => {
             window.open('https://github.com/lakeheck/Fluid-Simulation-WebGL');
             ga('send', 'event', 'link button', 'github');
         } }, 'fun').name('Github');
@@ -652,8 +712,10 @@ export class Fluid{
         githubIcon.className = 'icon github';
     
         if (LGL.isMobile())
-            gui.close();
+            this.gui.close();
     }
+
+
 }
 
 
