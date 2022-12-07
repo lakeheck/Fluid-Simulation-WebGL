@@ -14,6 +14,7 @@ export class Fluid{
         this.canvas = canvas;
         this.lastUpdateTime = 0.0;
         this.noiseSeed = 0.0;
+        this.baseNoiseSeed = 0.0;
         this.colorUpdateTimer = 0.0;
     }
 
@@ -156,6 +157,7 @@ export class Fluid{
         this.initFramebuffers();
         this.multipleSplats(parseInt(Math.random() * 20) + 5);
         this.noiseSeed = 0.0; 
+        this.baseNoiseSeed = 0.0;
         this.lastUpdateTime = Date.now();
         this.colorUpdateTimer = 0.0;
         this.update();
@@ -170,6 +172,7 @@ export class Fluid{
         dt = Math.min(dt, 0.016666); //never want to update slower than 60fps
         this.lastUpdateTime = now;
         this.noiseSeed += dt * config.NOISE_TRANSLATE_SPEED;
+        this.baseNoiseSeed += dt * config.ERRATA_NOISE_TRANSLATE_SPEED;
         if (LGL.resizeCanvas()) //resize if needed 
             this.initFramebuffers();
         this.updateColors(dt); //step through our sim 
@@ -222,7 +225,7 @@ export class Fluid{
         gl.uniform1f(this.baseProgram.uniforms.uPeriod, config.ERRATA_PERIOD); 
         gl.uniform3f(this.baseProgram.uniforms.uTranslate, 0.0, 0.0, 0.0);
         gl.uniform1f(this.baseProgram.uniforms.uAmplitude, config.ERRATA_AMP); 
-        gl.uniform1f(this.baseProgram.uniforms.uSeed, this.noiseSeed); 
+        gl.uniform1f(this.baseProgram.uniforms.uSeed, this.baseNoiseSeed); 
         gl.uniform1f(this.baseProgram.uniforms.uExponent, config.ERRATA_EXPONENT); 
         gl.uniform1f(this.baseProgram.uniforms.uRidgeThreshold, config.ERRATA_RIDGE); 
         gl.uniform1f(this.baseProgram.uniforms.uLacunarity, config.ERRATA_LACUNARITY); 
@@ -609,13 +612,13 @@ export class Fluid{
         // mapFolder.add(config, 'COLOR_MAP_ENABLE').name('color map enable');
     
         let baseFolder = gui.addFolder('Base Color Map');
-        baseFolder.add(config, 'ERRATA_PERIOD', 0, 10.0).name('Period');
-        baseFolder.add(config, 'ERRATA_EXPONENT', 0, 4.0).name('Exponent');
-        baseFolder.add(config, 'ERRATA_RIDGE', 0, 1.5).name('Ridge');
+        baseFolder.add(config, 'ERRATA_PERIOD', 0, 4.0).name('Period');
+        baseFolder.add(config, 'ERRATA_EXPONENT', 1, 4.0).name('Exponent');
+        baseFolder.add(config, 'ERRATA_RIDGE', 0.5, 1.5).name('Ridge');
         baseFolder.add(config, 'ERRATA_AMP', 0, 4.0).name('Amplitude');
         baseFolder.add(config, 'ERRATA_LACUNARITY', 0, 4).name('Lacunarity');
         baseFolder.add(config, 'ERRATA_NOISE_TRANSLATE_SPEED', 0, 2).name('Noise Translate Speed');
-        baseFolder.add(config, 'ERRATA_GAIN', 0.0, 1.0).name('Gain');
+        baseFolder.add(config, 'ERRATA_GAIN', 0.0, 5.0).name('Gain');
         baseFolder.add(config, 'ERRATA_OCTAVES', 0, 8).name('Octaves').step(1);
 
 
