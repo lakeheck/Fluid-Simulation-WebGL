@@ -71,6 +71,9 @@ export class Fluid{
         let simRes = LGL.getResolution(config.SIM_RESOLUTION);//getResolution basically just applies view aspect ratio to the passed resolution 
         let dyeRes = LGL.getResolution(config.DYE_RESOLUTION);//getResolution basically just applies view aspect ratio to the passed resolution 
     
+        // dyeRes.width = window.innerWidth;
+        // dyeRes.height = window.innerHeight;
+
         const texType = ext.halfFloatTexType; //TODO - should be 32 bit floats? 
         const rgba    = ext.formatRGBA;
         const rg      = ext.formatRG;
@@ -82,14 +85,14 @@ export class Fluid{
         //use helper function to create pairs of buffer objects that will be ping pong'd for our sim 
         //this lets us define the buffer objects that we wil want to use for feedback 
         if (this.dye == null || this.noise == null){
-            this.dye = LGL.createDoubleFBO(dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
-            this.noise = LGL.createDoubleFBO(dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
-            this.base = LGL.createDoubleFBO(dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
+            this.dye = LGL.createDoubleFBO(canvas.width, canvas.height, rgba.internalFormat, rgba.format, texType, filtering);
+            this.noise = LGL.createDoubleFBO(canvas.width, canvas.height, rgba.internalFormat, rgba.format, texType, filtering);
+            this.base = LGL.createDoubleFBO(canvas.width, canvas.height, rgba.internalFormat, rgba.format, texType, filtering);
         }
         else {//resize if needed 
-            this.dye = LGL.resizeDoubleFBO(this.dye, dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
-            this.noise = LGL.resizeDoubleFBO(this.noise, dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
-            this.base = LGL.resizeDoubleFBO(this.base, dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
+            this.dye = LGL.resizeDoubleFBO(this.dye, canvas.width, canvas.height, rgba.internalFormat, rgba.format, texType, filtering);
+            this.noise = LGL.resizeDoubleFBO(this.noise, canvas.width, canvas.height, rgba.internalFormat, rgba.format, texType, filtering);
+            this.base = LGL.resizeDoubleFBO(this.base, canvas.width, canvas.height, rgba.internalFormat, rgba.format, texType, filtering);
 
         }
         if (this.velocity == null)
@@ -307,6 +310,7 @@ export class Fluid{
             gl.uniform1f(this.splatVelProgram.uniforms.radius, this.correctRadius(config.SPLAT_RADIUS / 100.0));
             LGL.blit(this.velocity.write);
             this.velocity.swap();
+        
         }
     
         if(config.DENSITY_MAP_ENABLE){
@@ -349,6 +353,7 @@ export class Fluid{
             applyBloom(this.dye.read, bloom);
             if (config.SUNRAYS) {
                 this.applySunrays(this.dye.read, this.dye.write, this.sunrays);
+                this.applySunrays(this.base.read, this.base.write, this.sunrays);
                 this.blur(this.sunrays, this.sunraysTemp, 1);
             }
             
