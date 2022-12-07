@@ -41,8 +41,10 @@ export class Fluid{
     vorticityProgram          = new LGL.Program(GLSL.baseVertexShader, GLSL.vorticityShader);
     pressureProgram           = new LGL.Program(GLSL.baseVertexShader, GLSL.pressureShader);
     gradientSubtractProgram   = new LGL.Program(GLSL.baseVertexShader, GLSL.gradientSubtractShader);
-    noiseProgram              = new LGL.Program(GLSL.baseVertexShader, GLSL.noiseShader); //noise generator 
-    
+    noiseProgram              = new LGL.Program(GLSL.noiseVertexShader, GLSL.noiseShader); //noise generator 
+    baseProgram              = new LGL.Program(GLSL.noiseVertexShader, GLSL.errataNoiseShader); //noise generator 
+
+
     dye;
     velocity;
     divergence;
@@ -53,7 +55,7 @@ export class Fluid{
     sunrays;
     sunraysTemp;
     noise;
-
+    base;
     // noiseSeed = 0.0; 
     // lastUpdateTime;
     // colorUpdateTimer = 0.0;
@@ -81,10 +83,13 @@ export class Fluid{
         if (this.dye == null || this.noise == null){
             this.dye = LGL.createDoubleFBO(dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
             this.noise = LGL.createDoubleFBO(dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
+            this.base = LGL.createDoubleFBO(dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
         }
         else {//resize if needed 
             this.dye = LGL.resizeDoubleFBO(this.dye, dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
             this.noise = LGL.resizeDoubleFBO(this.noise, dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
+            this.base = LGL.resizeDoubleFBO(this.noise, dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
+
         }
         if (this.velocity == null)
             this.velocity = LGL.createDoubleFBO(simRes.width, simRes.height, rg.internalFormat, rg.format, texType, filtering);
@@ -211,6 +216,23 @@ export class Fluid{
 
 
     step (dt) {
+
+        gl.disable(gl.BLEND);
+        this.baseProgram.bind();
+        gl.uniform1f(this.baseProgram.uniforms.uPeriod, config.PERIOD); 
+        gl.uniform3f(this.baseProgram.uniforms.uTranslate, 0.0, 0.0, 0.0);
+        gl.uniform1f(this.baseProgram.uniforms.uAmplitude, config.AMP); 
+        gl.uniform1f(this.baseProgram.uniforms.uSeed, this.noiseSeed); 
+        gl.uniform1f(this.baseProgram.uniforms.uExponent, config.EXPONENT); 
+        gl.uniform1f(this.baseProgram.uniforms.uRidgeThreshold, config.RIDGE); 
+        gl.uniform1f(this.baseProgram.uniforms.uLacunarity, config.LACUNARITY); 
+        gl.uniform1f(this.baseProgram.uniforms.uGain, config.GAIN); 
+        gl.uniform1f(this.baseProgram.uniforms.uOctaves, config.OCTAVES); 
+        gl.uniform3f(this.baseProgram.uniforms.uScale, 1., 1., 1.); 
+        gl.uniform1f(this.baseProgram.uniforms.uAspect, config.ASPECT); 
+        LGL.blit(this.base.write);
+        this.base.swap();
+
         gl.disable(gl.BLEND);
         this.noiseProgram.bind();
         gl.uniform1f(this.noiseProgram.uniforms.uPeriod, config.PERIOD); 
@@ -272,7 +294,7 @@ export class Fluid{
             this.splatVelProgram.bind();
             gl.uniform1i(this.splatVelProgram.uniforms.uTarget, this.velocity.read.attach(0)); 
             // gl.uniformthis.1i(splatVelProgram.uniforms.uTarget, velocity.read.attach(0));
-            gl.uniform1i(this.splatVelProgram.uniforms.uDensityMap, this.picture.attach(1)); //density map
+            gl.uniform1i(this.splatVelProgram.uniforms.uDensityMap, this.base.read.attach(1)); //density map
             gl.uniform1i(this.splatVelProgram.uniforms.uForceMap, this.noise.read.attach(2)); //add noise for velocity map 
             gl.uniform1f(this.splatVelProgram.uniforms.aspectRatio, canvas.width / canvas.height);
             gl.uniform1f(this.splatVelProgram.uniforms.uVelocityScale, config.VELOCITYSCALE);
@@ -290,8 +312,8 @@ export class Fluid{
             gl.uniform1f(this.splatColorProgram.uniforms.aspectRatio, canvas.width / canvas.height);
             gl.uniform2f(this.splatColorProgram.uniforms.point, 0, 0);
             gl.uniform1i(this.splatColorProgram.uniforms.uTarget, this.dye.read.attach(0));
-            gl.uniform1i(this.splatColorProgram.uniforms.uColor, this.picture.attach(1)); //color map
-            gl.uniform1i(this.splatColorProgram.uniforms.uDensityMap, this.picture.attach(2)); //density map
+            gl.uniform1i(this.splatColorProgram.uniforms.uColor, this.base.read.attach(1)); //color map
+            gl.uniform1i(this.splatColorProgram.uniforms.uDensityMap, this.base.read.attach(2)); //density map
             gl.uniform1i(this.splatVelProgram.uniforms.uClick, 0);
             gl.uniform1f(this.splatColorProgram.uniforms.radius, this.correctRadius(config.SPLAT_RADIUS / 100.0));
             LGL.blit(this.dye.write);
@@ -343,7 +365,7 @@ export class Fluid{
                 this.drawDisplay(target);
             }
             else{
-                this.drawDisplay(this.noise);
+                this.drawDisplay(this.base);
             }
             // LGL.blit(picture);
         
@@ -362,7 +384,7 @@ export class Fluid{
             gl.uniform1i(this.displayMaterial.uniforms.uTexture, this.dye.read.attach(0));
         }
         else{
-            gl.uniform1i(this.displayMaterial.uniforms.uTexture, this.noise.read.attach(0));
+            gl.uniform1i(this.displayMaterial.uniforms.uTexture, this.base.read.attach(0));
         }
         if (config.BLOOM) {
             gl.uniform1i(this.displayMaterial.uniforms.uBloom, this.bloom.attach(1));
