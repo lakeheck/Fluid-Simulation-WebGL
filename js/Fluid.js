@@ -165,7 +165,7 @@ export class Fluid{
         dt = Math.min(dt, 0.016666); //never want to update slower than 60fps
         this.lastUpdateTime = now;
         this.noiseSeed += dt * config.NOISE_TRANSLATE_SPEED;
-        if (LGL.resizeCanvas()) //resize if needed 
+        if (LGL.resizeCanvas() || (this.dye.width != config.DYE_RESOLUTION && this.dye.height != config.DYE_RESOLUTION) || (this.velocity.width != config.SIM_RESOLUTION && this.velocity.height != config.SIM_RESOLUTION)) //resize if needed 
             this.initFramebuffers();
         this.updateColors(dt); //step through our sim 
         this.applyInputs(); //take from ui
