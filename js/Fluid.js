@@ -630,7 +630,7 @@ export class Fluid{
 
 
 
-function pointerPrototype () {
+export function pointerPrototype () {
     this.id = -1;
     this.texcoordX = 0;
     this.texcoordY = 0;
