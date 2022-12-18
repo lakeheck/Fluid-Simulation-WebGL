@@ -41,7 +41,7 @@ export class Fluid{
     vorticityProgram          = new LGL.Program(GLSL.baseVertexShader, GLSL.vorticityShader);
     pressureProgram           = new LGL.Program(GLSL.baseVertexShader, GLSL.pressureShader);
     gradientSubtractProgram   = new LGL.Program(GLSL.baseVertexShader, GLSL.gradientSubtractShader);
-    noiseProgram              = new LGL.Program(GLSL.baseVertexShader, GLSL.noiseShader); //noise generator 
+    noiseProgram              = new LGL.Program(GLSL.noiseVertexShader, GLSL.noiseShader); //noise generator 
     
     dye;
     velocity;
@@ -59,7 +59,7 @@ export class Fluid{
     // colorUpdateTimer = 0.0;
 
 
-    picture = LGL.createTextureAsync('img/flowers_fence.JPG');
+    picture = LGL.createTextureAsync('img/colored_noise_bg.JPG');
     ditheringTexture = LGL.createTextureAsync('img/LDR_LLL1_0.png');
     
     // displayMaterial = new LGL.Material(GLSL.baseVertexShader, GLSL.displayShaderSource);
@@ -221,7 +221,7 @@ export class Fluid{
         gl.uniform1f(this.noiseProgram.uniforms.uRidgeThreshold, config.RIDGE); 
         gl.uniform1f(this.noiseProgram.uniforms.uLacunarity, config.LACUNARITY); 
         gl.uniform1f(this.noiseProgram.uniforms.uGain, config.GAIN); 
-        gl.uniform1f(this.noiseProgram.uniforms.uOctaves, config.OCTAVES); 
+        gl.uniform1i(this.noiseProgram.uniforms.uOctaves, config.OCTAVES); 
         gl.uniform3f(this.noiseProgram.uniforms.uScale, 1., 1., 1.); 
         gl.uniform1f(this.noiseProgram.uniforms.uAspect, config.ASPECT); 
         LGL.blit(this.noise.write);
@@ -567,11 +567,10 @@ export class Fluid{
         //dat is a library developed by Googles Data Team for building JS interfaces. Needs to be included in project directory 
         var gui = new dat.GUI({ width: 300 });
     
-        gui.add(config, 'DISPLAY_FLUID').name('Render Fluid <> Vel Map');
-    
+        
         let fluidFolder = gui.addFolder('Fluid Settings');
-        fluidFolder.add(config, 'DYE_RESOLUTION', { 'high': 1024, 'medium': 512, 'low': 256, 'very low': 128 }).name(parName).onFinishChange(this.initFramebuffers);
-        fluidFolder.add(config, 'SIM_RESOLUTION', { '32': 32, '64': 64, '128': 128, '256': 256 }).name('Sim Resolution').onFinishChange(this.initFramebuffers);
+        fluidFolder.add(config, 'DYE_RESOLUTION', { 'high': 1024, 'medium': 512, 'low': 256, 'very low': 128 }).name(parName);
+        fluidFolder.add(config, 'SIM_RESOLUTION', { '32': 32, '64': 64, '128': 128, '256': 256 }).name('Sim Resolution');
         fluidFolder.add(config, 'DENSITY_DISSIPATION', 0, 4.0).name('Density Diffusion');
         fluidFolder.add(config, 'FLOW', 0, 0.5).name('Flow');
         fluidFolder.add(config, 'SPLAT_FLOW', 0, 1).name('Splat Flow');
@@ -580,7 +579,6 @@ export class Fluid{
         fluidFolder.add(config, 'PRESSURE', 0.0, 1.0).name('Pressure');
         fluidFolder.add(config, 'CURL', 0, 50).name('Vorticity').step(1);
         fluidFolder.add(config, 'SPLAT_RADIUS', 0.01, 1.0).name('Splat Radius');
-        fluidFolder.add(config, 'SHADING').name('Shading').onFinishChange(this.updateKeywords);
         fluidFolder.add(config, 'PAUSED').name('Paused').listen();
         fluidFolder.add({ fun: () => {
             splatStack.push(parseInt(Math.random() * 20) + 5);
@@ -590,8 +588,7 @@ export class Fluid{
         let mapFolder = gui.addFolder('Maps');
         mapFolder.add(config, 'FORCE_MAP_ENABLE').name('force map enable');
         mapFolder.add(config, 'DENSITY_MAP_ENABLE').name('density map enable'); //adding listen() will update the ui if the parameter value changes elsewhere in the program 
-        // mapFolder.add(config, 'COLOR_MAP_ENABLE').name('color map enable');
-    
+        
         let noiseFolder = gui.addFolder('Velocity Map');
         noiseFolder.add(config, 'PERIOD', 0, 10.0).name('Period');
         noiseFolder.add(config, 'EXPONENT', 0, 4.0).name('Exponent');
@@ -601,16 +598,18 @@ export class Fluid{
         noiseFolder.add(config, 'NOISE_TRANSLATE_SPEED', 0, 2).name('Noise Translate Speed');
         noiseFolder.add(config, 'GAIN', 0.0, 1.0).name('Gain');
         noiseFolder.add(config, 'OCTAVES', 0, 8).name('Octaves').step(1);
-        noiseFolder.add(config, 'MONO').name('Mono');
+        noiseFolder.add(config, 'DISPLAY_FLUID').name('Toggle Show Vel Map');
     
+
+        //not using these 
         // let bloomFolder = gui.addFolder('Bloom');
         // bloomFolder.add(config, 'BLOOM').name('enabled').onFinishChange(updateKeywords);
         // bloomFolder.add(config, 'BLOOM_INTENSITY', 0.1, 2.0).name('intensity');
         // bloomFolder.add(config, 'BLOOM_THRESHOLD', 0.0, 1.0).name('threshold');
     
-        let sunraysFolder = gui.addFolder('Sunrays');
-        sunraysFolder.add(config, 'SUNRAYS').name('enabled').onFinishChange(this.updateKeywords);
-        sunraysFolder.add(config, 'SUNRAYS_WEIGHT', 0.01, 1.0).name('weight');
+        // let sunraysFolder = gui.addFolder('Sunrays');
+        // sunraysFolder.add(config, 'SUNRAYS').name('enabled').onFinishChange(this.updateKeywords);
+        // sunraysFolder.add(config, 'SUNRAYS_WEIGHT', 0.01, 1.0).name('weight');
     
         //create a function to assign to a button, here linking my github
         let github = gui.add({ fun : () => {

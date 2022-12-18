@@ -25,6 +25,28 @@ void main () {
 }
 `);
 
+//need to have a separate vert shader for noise so that we can access more recent version of GLSL compiler
+export const noiseVertexShader = compileShader(gl.VERTEX_SHADER, `#version 300 es
+precision highp float;
+
+in vec2 aPosition;
+out vec2 vUv;
+out vec2 vL;
+out vec2 vR;
+out vec2 vT;
+out vec2 vB;
+uniform vec2 texelSize;
+
+void main () {
+    vUv = aPosition * 0.5 + 0.5;
+    vL = vUv - vec2(texelSize.x, 0.0);
+    vR = vUv + vec2(texelSize.x, 0.0);
+    vT = vUv + vec2(0.0, texelSize.y);
+    vB = vUv - vec2(0.0, texelSize.y);
+    gl_Position = vec4(aPosition, 0.0, 1.0);
+}
+`);
+
 
 
 
@@ -50,7 +72,7 @@ gl_Position = vec4(aPosition, 0.0, 1.0);
 
 //lets get some noise! 
 //noise shader saved in project dir
-export const noiseShader = compileShader(gl.FRAGMENT_SHADER, `
+export const noiseShader = compileShader(gl.FRAGMENT_SHADER, ` #version 300 es
 precision highp float;
 
 uniform float uPeriod;
@@ -69,8 +91,8 @@ uniform int uOctaves;
 #define PI 3.141592653589793
 #define TWOPI 6.28318530718
 
-varying vec2 vUv;
-
+in vec2 vUv;
+out vec4 fragColor;
 
 vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
 vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -182,7 +204,7 @@ return noise;
 }
 
 
-#define FBM(NOISE, SEED) float G=uGain; float freq = 1.0; float a = 1.0; float t = 0.0;for(int i=0; i<8; i++){t+= a*NOISE(freq*st, SEED);freq*=uLacunarity;a*=G;}
+#define FBM(NOISE, SEED) float G=uGain; float freq = 1.0; float a = 1.0; float t = 0.0;for(int i=0; i<uOctaves; i++){t+= a*NOISE(freq*st, SEED);freq*=uLacunarity;a*=G;}
 
 
 float monoSimplex(vec3 st, float seed){ 
@@ -322,7 +344,7 @@ float G=uGain;
 float freq = 1.0; 
 float a = 1.0; 
 vec4 t = vec4(0.0);
-for(int i=0; i<8; i++){
+for(int i=0; i<uOctaves; i++){
 t += a*rgbSimplex(freq*st, seed);
 freq*= uLacunarity;
 //freq = pow(2.0, float(i));
@@ -339,7 +361,7 @@ NOISE_RGB(monoSimplex, 2.4);
 // FBM(recursiveWarpNoise, 2.4);
 vec4 color = fbm(st, uSeed); 
 //output
-gl_FragColor = (color);
+fragColor = (color);
 
 }
 `);
