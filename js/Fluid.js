@@ -59,7 +59,7 @@ export class Fluid{
     // colorUpdateTimer = 0.0;
 
 
-    picture = LGL.createTextureAsync('img/colored_noise_bg.JPG');
+    picture = LGL.createTextureAsync('img/colored_noise_bg.jpg');
     ditheringTexture = LGL.createTextureAsync('img/LDR_LLL1_0.png');
     
     // displayMaterial = new LGL.Material(GLSL.baseVertexShader, GLSL.displayShaderSource);
