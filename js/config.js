@@ -2,7 +2,7 @@ export const config = {
     SIM_RESOLUTION: 256, //simres
     DYE_RESOLUTION: 1024, //output res 
     ASPECT: 1.0,
-    FLOW: 0.0066,
+    FLOW: 7,
     SPLAT_FLOW: 0.5,
     VELOCITYSCALE: 1.0,
     CAPTURE_RESOLUTION: 1024, //screen capture res 
@@ -40,5 +40,7 @@ export const config = {
     OCTAVES: 4,
     MONO: false,
     NOISE_TRANSLATE_SPEED: 0.15,
-    DISPLAY_FLUID: true
+    DISPLAY_FLUID: true,
+    RESET: true,
+    RANDOM: true
 };

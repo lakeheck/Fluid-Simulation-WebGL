@@ -286,7 +286,7 @@ export class Fluid{
     
         if(config.DENSITY_MAP_ENABLE){
             this.splatColorProgram.bind();
-            gl.uniform1f(this.splatColorProgram.uniforms.uFlow, config.FLOW);
+            gl.uniform1f(this.splatColorProgram.uniforms.uFlow, config.FLOW / 1000);
             gl.uniform1f(this.splatColorProgram.uniforms.aspectRatio, canvas.width / canvas.height);
             gl.uniform2f(this.splatColorProgram.uniforms.point, 0, 0);
             gl.uniform1i(this.splatColorProgram.uniforms.uTarget, this.dye.read.attach(0));
@@ -567,27 +567,27 @@ export class Fluid{
         //dat is a library developed by Googles Data Team for building JS interfaces. Needs to be included in project directory 
         var gui = new dat.GUI({ width: 300 });
     
+        gui.add(config, 'DYE_RESOLUTION', { 'high': 1024, 'medium': 512, 'low': 256, 'very low': 128 }).name(parName);
+        gui.add(config, 'SIM_RESOLUTION', { '32': 32, '64': 64, '128': 128, '256': 256 }).name('Fluid Sim Resolution');
         
         let fluidFolder = gui.addFolder('Fluid Settings');
-        fluidFolder.add(config, 'DYE_RESOLUTION', { 'high': 1024, 'medium': 512, 'low': 256, 'very low': 128 }).name(parName);
-        fluidFolder.add(config, 'SIM_RESOLUTION', { '32': 32, '64': 64, '128': 128, '256': 256 }).name('Sim Resolution');
         fluidFolder.add(config, 'DENSITY_DISSIPATION', 0, 4.0).name('Density Diffusion');
-        fluidFolder.add(config, 'FLOW', 0, 0.5).name('Flow');
+        fluidFolder.add(config, 'FLOW', 0, 10).name('Flow');
         fluidFolder.add(config, 'SPLAT_FLOW', 0, 1).name('Splat Flow');
         fluidFolder.add(config, 'VELOCITY_DISSIPATION', 0, 4.0).name('Velocity Diffusion');
         fluidFolder.add(config, 'VELOCITYSCALE', 0, 10.0).name('Velocity Scale');
         fluidFolder.add(config, 'PRESSURE', 0.0, 1.0).name('Pressure');
         fluidFolder.add(config, 'CURL', 0, 50).name('Vorticity').step(1);
         fluidFolder.add(config, 'SPLAT_RADIUS', 0.01, 1.0).name('Splat Radius');
-        fluidFolder.add(config, 'PAUSED').name('Paused').listen();
         fluidFolder.add({ fun: () => {
             splatStack.push(parseInt(Math.random() * 20) + 5);
         } }, 'fun').name('Random splats');
         
         
-        let mapFolder = gui.addFolder('Maps');
+        let mapFolder = gui.addFolder('Enable / Disable Maps');
         mapFolder.add(config, 'FORCE_MAP_ENABLE').name('force map enable');
         mapFolder.add(config, 'DENSITY_MAP_ENABLE').name('density map enable'); //adding listen() will update the ui if the parameter value changes elsewhere in the program 
+        mapFolder.add(config, 'DISPLAY_FLUID').name('Toggle Show Vel Map');
         
         let noiseFolder = gui.addFolder('Velocity Map');
         noiseFolder.add(config, 'PERIOD', 0, 10.0).name('Period');
@@ -595,11 +595,13 @@ export class Fluid{
         noiseFolder.add(config, 'RIDGE', 0, 1.5).name('Ridge');
         noiseFolder.add(config, 'AMP', 0, 4.0).name('Amplitude');
         noiseFolder.add(config, 'LACUNARITY', 0, 4).name('Lacunarity');
-        noiseFolder.add(config, 'NOISE_TRANSLATE_SPEED', 0, 2).name('Noise Translate Speed');
+        noiseFolder.add(config, 'NOISE_TRANSLATE_SPEED', 0, .5).name('Noise Translate Speed');
         noiseFolder.add(config, 'GAIN', 0.0, 1.0).name('Gain');
         noiseFolder.add(config, 'OCTAVES', 0, 8).name('Octaves').step(1);
-        noiseFolder.add(config, 'DISPLAY_FLUID').name('Toggle Show Vel Map');
-    
+        
+        gui.add(config, 'PAUSED').name('Paused').listen();
+        gui.add(config, 'RESET').name('Reset').onFinishChange(reset);
+        gui.add(config, 'RANDOM').name('Randomize').onFinishChange(randomizeParams);
 
         //not using these 
         // let bloomFolder = gui.addFolder('Bloom');
@@ -624,6 +626,21 @@ export class Fluid{
     
         if (LGL.isMobile())
             gui.close();
+
+            
+        function reset(){
+            noiseFolder.__controllers.forEach(c => c.setValue(c.initialValue));
+            fluidFolder.__controllers.forEach(c => c.setValue(c.initialValue));
+            mapFolder.__controllers.forEach(c => c.setValue(c.initialValue));
+        }
+
+
+        function randomizeParams(){
+            noiseFolder.__controllers.forEach(c => c.setValue(Math.random()*(c.__max - c.__min) + c.__min));
+            fluidFolder.__controllers.forEach(c => c.setValue(Math.random()*(c.__max - c.__min) + c.__min));
+
+        }
+
     }
 }
 
