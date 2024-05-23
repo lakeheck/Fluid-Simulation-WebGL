@@ -406,9 +406,12 @@ export function resizeFBO (target, w, h, internalFormat, format, type, param) {
     return newFBO;
 }
 
+
 export function resizeDoubleFBO (target, w, h, internalFormat, format, type, param) {
     if (target.width == w && target.height == h)
-        return target;
+        {
+            return target;
+        }
     target.read = resizeFBO(target.read, w, h, internalFormat, format, type, param);
     target.write = createFBO(w, h, internalFormat, format, type, param);
     target.width = w;
@@ -623,6 +626,9 @@ export function calcDeltaTime (lastUpdateTime) {
 export function resizeCanvas () {
     let width = scaleByPixelRatio(canvas.clientWidth);
     let height = scaleByPixelRatio(canvas.clientHeight);
+
+    // width = window.innerWidth;
+    // height = window.innerHeight;
     if (canvas.width != width || canvas.height != height) {
         canvas.width = width;
         canvas.height = height;

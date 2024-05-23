@@ -68,7 +68,7 @@ export class Fluid{
         let simRes = LGL.getResolution(config.SIM_RESOLUTION);//getResolution basically just applies view aspect ratio to the passed resolution 
         let dyeRes = LGL.getResolution(config.DYE_RESOLUTION);//getResolution basically just applies view aspect ratio to the passed resolution 
     
-        const texType = ext.halfFloatTexType; //TODO - should be 32 bit floats? 
+        const texType = ext.halfFloatTexType; 
         const rgba    = ext.formatRGBA;
         const rg      = ext.formatRG;
         const r       = ext.formatR;
@@ -83,13 +83,15 @@ export class Fluid{
             this.noise = LGL.createDoubleFBO(dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
         }
         else {//resize if needed 
-            this.dye = LGL.resizeDoubleFBO(this.dye, dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
+            // this.dye = LGL.resizeDoubleFBO(this.dye, dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering); // TODO this line is causing the horizontal bars on window resize
             this.noise = LGL.resizeDoubleFBO(this.noise, dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
         }
-        if (this.velocity == null)
+        if (this.velocity == null){
             this.velocity = LGL.createDoubleFBO(simRes.width, simRes.height, rg.internalFormat, rg.format, texType, filtering);
-        else //resize if needed 
+        }
+        else{//resize if needed 
             this.velocity = LGL.resizeDoubleFBO(this.velocity, simRes.width, simRes.height, rg.internalFormat, rg.format, texType, filtering);
+        } 
         //other buffer objects that dont need feedback / ping-pong 
         //notice the filtering type is set to gl.NEAREST meaning we grab just a single px, no filtering 
         this.divergence = LGL.createFBO      (simRes.width, simRes.height, r.internalFormat, r.format, texType, gl.NEAREST);
@@ -99,6 +101,7 @@ export class Fluid{
         //setup buffers for post process 
         this.initBloomFramebuffers();
         this.initSunraysFramebuffers();
+
     }
 
     initBloomFramebuffers () {
