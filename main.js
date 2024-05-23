@@ -15,7 +15,7 @@ LGL.resizeCanvas();
 
 
 let fluid = new Fluid(gl);
-fluid.startGUI();
+// fluid.startGUI();
 fluid.simulate();
 
 

@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
         <meta charset="utf-8">
         <meta http-equiv="Cache-Control" content="no-cache">
 
@@ -9,13 +12,13 @@
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="mobile-web-app-capable" content="yes">
 
-        <title>WebGL Fluid Simulation</title>
-        <meta name="description" content="A WebGL fluid simulation with density and force maps">
+        <title>Lake Heckaman</title>
+        <meta name="description" content="">
 
         <meta property="og:type" content="website">
-        <meta property="og:title" content="WebGL Fluid Simulation">
-        <meta property="og:description" content="A WebGL fluid simulation">
-        <meta property="og:url" content="https://lakeheck.github.io/Fluid-Simulation-WebGL/">
+        <meta property="og:title" content="Lake Heckaman">
+        <meta property="og:description" content="New Media Artist, Ineteractive Installations, TouchDesigner">
+        <meta property="og:url" content="lakeheckaman.com">
 
         <script type="text/javascript" src="./libs/dat.gui.min.js"></script>
         <style>
@@ -45,14 +48,56 @@
                 height: 100%;
                 display: block;
             }
+            #title { /* give myself a title class for non-clickable text on landingpage */
+                position: absolute;
+                top: 33.33%;
+                left: 50%;
+                transform: translateX(-50%);
+                color: white;
+                font-size: 72px;
+                text-align: center;
+                font-family: 'Montserrat', sans-serif;
+                font-weight: 400;
+                z-index: 1000; /* Ensure the title is above the canvas */
+            }
 
-
+            #subtitle { /* give myself a title class for non-clickable text on landingpage */
+                position: absolute;
+                top: 40.33%;
+                left: 50%;
+                transform: translateX(-50%);
+                color: white;
+                font-size: 38px;
+                text-align: center;
+                font-family: 'Montserrat', sans-serif;
+                font-weight: 400;
+                z-index: 1000; /* Ensure the title is above the canvas */
+            }
+            #link {
+                position: absolute;
+                top: 60%;
+                left: 50%;
+                color: rgb(170, 170, 170);
+                transform: translate(-50%, -50%); /*shift element by half its width and height to center it */
+                font-size: 32px;
+                text-decoration: none;
+                z-index: 1000; /* Ensure the link is above the canvas */
+            }.montserrat-regular {
+            font-family: 'Montserrat', sans-serif;
+            font-optical-sizing: auto;
+            font-weight: 400;
+            font-style: normal;
+        }
         </style>
         <script>
         </script>
     </head>
     <body>
         <canvas></canvas>
+        <a id="title">Lake Heckaman</a>
+        <a id="subtitle">New Media Artist</a>
+
+        <a id="link" href="https://www.lakeheckaman.com" target="_blank" class="montserrat-regular">PORTFOLIO</a>
         <script type="module" src="./main.js"></script>
     </body>
 </html>
