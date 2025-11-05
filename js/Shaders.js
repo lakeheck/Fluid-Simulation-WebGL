@@ -672,6 +672,7 @@ uniform float radius;
 uniform float uVelocityScale;
 uniform sampler2D uDensityMap;
 uniform sampler2D uForceMap;
+uniform sampler2D uWindMap;
 
 void main () {
     vec2 p = vUv - point.xy;
@@ -680,6 +681,7 @@ void main () {
     splat = smoothstep(0.0, 1.0, texture2D(uDensityMap, vUv).xyz) * (normalize(texture2D(uForceMap, vUv).rgb)*2.0-1.0) * uVelocityScale;
     splat.z = 0.0;
     vec3 base = texture2D(uTarget, vUv).xyz;
+    splat.rg += texture2D(uWindMap, vUv).xy;
     gl_FragColor = vec4(base + splat, 1.0);
 }
 `);
@@ -882,5 +884,72 @@ void main () {
     vec2 velocity = texture2D(uVelocity, vUv).xy;
     velocity.xy -= vec2(R - L, T - B);
     gl_FragColor = vec4(velocity, 0.0, 1.0);
+}
+`);
+
+export const windShader = compileShader(gl.FRAGMENT_SHADER, `
+precision highp float;
+precision highp sampler2D;
+
+varying vec2 vUv;
+
+
+uniform float uGlobalWindScale, uSmoothness, uWindMix;
+uniform vec2 uCenter;
+uniform float uWindPattern1, uWindPattern2;
+
+
+vec2 wind(vec2 uv, float thres, float smoothness, int windpattern) {
+
+    vec2 up = vec2(0.0, 1.0);
+    vec2 down = vec2(0.0, -1.0);
+    vec2 left = vec2(1.0, 0.0);
+    vec2 right = vec2(-1.0, 0.0);
+    
+    vec2 wind = vec2(0.0);
+
+	if( windpattern == 0) wind = -vec2(smoothstep(0.0, thres, uv.s), 0);
+	else if( windpattern == 1)wind = vec2(smoothstep(1.0-thres, 1.0, uv.s), 0);
+	else if( windpattern == 2 )wind = vec2(0, smoothstep(0.0, thres, uv.t)); 
+	else if( windpattern == 3 )wind = -vec2(0, smoothstep(1.0-thres, 1.0, uv.t)); 
+	else if( windpattern == 4 )wind = mix(right,left, smoothstep(thres-smoothness,thres+smoothness, uv.s));
+	else if( windpattern == 5 )wind = mix(up,down, smoothstep(thres-smoothness,thres+smoothness, uv.t));
+	else if( windpattern == 6 )wind = mix(left,right, smoothstep(thres-smoothness,thres+smoothness, uv.s));
+	else if( windpattern == 7 )wind = mix(up,down, smoothstep(thres-smoothness, thres+smoothness, uv.t)); 
+	else if( windpattern == 8) {
+		float thres1 = 1./3.;
+		float thres2 = 2./3.;
+		float m = smoothstep(thres1-smoothness, thres1+smoothness, uv.s);
+		m *= smoothstep(thres2+smoothness, thres2-smoothness, uv.s);
+		wind = mix(down, up, m);
+	}
+	else if( windpattern == 9 )wind = mix(left, right, smoothstep(thres-smoothness, thres+smoothness, uv.t));
+	else if( windpattern == 10 ) {
+		vec2 coord = uv.st - uCenter;
+		wind += -mix(up, down, smoothstep(thres-smoothness, thres+smoothness, coord.s));
+		wind += mix(left, right, smoothstep(thres-smoothness, thres+smoothness, coord.t));
+		wind = mix(wind, -coord, 0.95);
+        wind *= 1.0 / max(length(coord), 1e-4);
+	}
+	else { //default to circle / sink blend
+		vec2 coord = uv.st - uCenter;
+		wind += -mix(up, down, smoothstep(thres-smoothness, thres+smoothness, coord.s));
+		wind += mix(left, right, smoothstep(thres-smoothness, thres+smoothness, coord.t));
+		wind = mix(wind, -coord, 0.95);
+        wind *= 1.0 / max(length(coord), 1e-4);
+	}
+
+	return wind;
+}
+
+void main()
+{
+	//mix the two patterns
+    vec2 uv = vUv.st;
+    vec2 coord = uv.st - uCenter;
+    vec2 w = vec2(0.);
+    w = wind(vUv, 0.5, uSmoothness, int(uWindPattern1));
+    vec4 color = vec4(w * uGlobalWindScale, 0.0, 1.0);
+    gl_FragColor = color;
 }
 `);

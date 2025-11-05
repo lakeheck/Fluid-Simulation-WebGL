@@ -166,6 +166,9 @@ export const blit = (() => {
     return (target, clear = false) => {
         if (target == null)
         {
+
+
+            
             gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         }
