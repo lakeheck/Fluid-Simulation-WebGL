@@ -8,7 +8,7 @@ export const CONFIG_SCHEMA = {
   DYE_RESOLUTION:     { default: 1024, type: 'int',  label: 'Output Resolution' },
   PALETTE_RESOLUTION: { default: 128,  type: 'int',  label: 'Palette Resolution' },
   CAPTURE_RESOLUTION: { default: 1024, type: 'int',  label: 'Capture Resolution' },
-  FORCE_ASPECT: {default: true, type: 'bool'},
+  FORCE_ASPECT: {default: false, type: 'bool'},
   // -------------------- Fluid Dynamics --------------------
   ASPECT:             { default: 1.0,  min: 0.1, max: 5,  step: 0.01, label: 'Aspect' },
   FLOW:               { default: 3.44, min: 0,   max: 10, step: 0.01, label: 'Flow' , layerParam: true },
