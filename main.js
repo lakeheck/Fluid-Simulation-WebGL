@@ -6,13 +6,7 @@ import {config, CONFIG_SCHEMA} from "./js/config.js";
 import {Fluid, pointerPrototype} from "./js/Fluid.js";
 import * as LGL from "./js/WebGL.js";
 
-if (LGL.isMobile()) {
-    config.DYE_RESOLUTION = 512;
-}
-
-
 LGL.resizeCanvas();
-
 
 let fluid = new Fluid(gl);
 fluid.startGUI();
@@ -145,12 +139,6 @@ class App {
   getPlaying() {
     return this.playing;
   }
-  setWindScale(value) {
-    config.WIND_SCALE = value;
-  }
-  getWindScale() {
-    return this.windScale;
-  }
 }
 const app = new App();
 globalThis.addEventListener("layer:dimensionschange", (event) => {
@@ -169,13 +157,9 @@ globalThis.addEventListener("layer:paramchange", (event) => {
     const key = idToKey[id];
     const value = event.detail.value;
     config[key] = value;
-    if (key === 'WIND_SCALE') app.setWindScale(value);
     if (key === 'PAUSED') app.setPlaying(!value);
   }
 });
-
-
-
 
 
 // Request parameters from the parent platform.
@@ -209,7 +193,6 @@ globalThis.addEventListener("layer:paramchange", (event) => {
     const key = idToKey[id];
     if (!key) continue;
     config[key] = value;
-    if (key === 'WIND_SCALE') app.setWindScale(value);
     if (key === 'PAUSED') app.setPlaying(!value);
   }
 

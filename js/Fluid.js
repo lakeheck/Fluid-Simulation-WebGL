@@ -68,6 +68,7 @@ export class Fluid{
         let simRes = LGL.getResolution(config.SIM_RESOLUTION);//getResolution basically just applies view aspect ratio to the passed resolution 
         let dyeRes = LGL.getResolution(config.DYE_RESOLUTION);//getResolution basically just applies view aspect ratio to the passed resolution 
         let palRes = LGL.getResolution(config.PALETTE_RESOLUTION);
+        console.log(simRes,dyeRes,palRes);
         const texType = ext.halfFloatTexType; 
         const rgba    = ext.formatRGBA;
         const rg      = ext.formatRG;
@@ -518,7 +519,6 @@ export class Fluid{
     }
 
     startGUI () {
-        const parName = 'Output Resolution';
         //dat is a library developed by Googles Data Team for building JS interfaces. Needs to be included in project directory 
         var gui = new dat.GUI({ width: 300 });
         
@@ -553,27 +553,7 @@ export class Fluid{
 		addFromSchema(fluidFolder, 'WIND_SCALE');
 		addFromSchema(fluidFolder, 'LUT');
 		addFromSchema(fluidFolder, 'BDRF_NORMALS');
-        
-        
-        fluidFolder.add({ fun: () => {
-            splatStack.push(parseInt(Math.random() * 20) + 5);
-        } }, 'fun').name('Random splats');
-        
-        
-		let mapFolder = gui.addFolder('Enable / Disable Maps');
-		addFromSchema(mapFolder, 'FORCE_MAP_ENABLE');
-		addFromSchema(mapFolder, 'DENSITY_MAP_ENABLE');
-		addFromSchema(mapFolder, 'DISPLAY_FLUID');
-        
-		let noiseFolder = gui.addFolder('Velocity Map');
-		addFromSchema(noiseFolder, 'PERIOD');
-		addFromSchema(noiseFolder, 'EXPONENT');
-		addFromSchema(noiseFolder, 'RIDGE');
-		addFromSchema(noiseFolder, 'AMP');
-		addFromSchema(noiseFolder, 'LACUNARITY');
-		addFromSchema(noiseFolder, 'NOISE_TRANSLATE_SPEED');
-		addFromSchema(noiseFolder, 'GAIN');
-		addFromSchema(noiseFolder, 'OCTAVES');
+        fluidFolder.open();
         
 		const pausedCtrl = addFromSchema(gui, 'PAUSED');
 		if (pausedCtrl && pausedCtrl.listen) pausedCtrl.listen();
@@ -582,42 +562,12 @@ export class Fluid{
 		const randomCtrl = addFromSchema(gui, 'RANDOM');
 		if (randomCtrl) randomCtrl.onFinishChange(randomizeParams);
 
-        //not using these 
-        // let bloomFolder = gui.addFolder('Bloom');
-        // bloomFolder.add(config, 'BLOOM').name('enabled').onFinishChange(updateKeywords);
-        // bloomFolder.add(config, 'BLOOM_INTENSITY', 0.1, 2.0).name('intensity');
-        // bloomFolder.add(config, 'BLOOM_THRESHOLD', 0.0, 1.0).name('threshold');
-    
-        // let sunraysFolder = gui.addFolder('Sunrays');
-        // sunraysFolder.add(config, 'SUNRAYS').name('enabled').onFinishChange(this.updateKeywords);
-        // sunraysFolder.add(config, 'SUNRAYS_WEIGHT', 0.01, 1.0).name('weight');
-    
-        //create a function to assign to a button, here linking my github
-        let github = gui.add({ fun : () => {
-            window.open('https://github.com/lakeheck/Fluid-Simulation-WebGL');
-            ga('send', 'event', 'link button', 'github');
-        } }, 'fun').name('Github');
-        github.__li.className = 'cr function bigFont';
-        github.__li.style.borderLeft = '3px solid #8C8C8C';
-        let githubIcon = document.createElement('span');
-        github.domElement.parentElement.appendChild(githubIcon);
-        githubIcon.className = 'icon github';
-    
-        if (LGL.isMobile())
-            gui.close();
-
-            
         function reset(){
-            noiseFolder.__controllers.forEach(c => c.setValue(c.initialValue));
             fluidFolder.__controllers.forEach(c => c.setValue(c.initialValue));
-            mapFolder.__controllers.forEach(c => c.setValue(c.initialValue));
         }
 
-
         function randomizeParams(){
-            noiseFolder.__controllers.forEach(c => c.setValue(Math.random()*(c.__max - c.__min) + c.__min));
             fluidFolder.__controllers.forEach(c => c.setValue(Math.random()*(c.__max - c.__min) + c.__min));
-
         }
 
     }

@@ -18,11 +18,11 @@ export const CONFIG_SCHEMA = {
 
   ASPECT:             { default: 1.0,  min: 0.1, max: 5,  step: 0.01, label: 'Aspect' },
 
-  FLOW:               { default: 3.44, min: 0,   max: 10, step: 0.01, label: 'Flow' },
+  FLOW:               { default: 3.44, min: 0,   max: 10, step: 0.01, label: 'Flow' , layerParam: true },
 
   SPLAT_FLOW:         { default: 0.15, min: 0,   max: 1,  step: 0.001, label: 'Splat Flow' },
 
-  VELOCITYSCALE:      { default: 1.0,  min: 0,   max: 5,  step: 0.01, label: 'Velocity Scale' },
+  VELOCITYSCALE:      { default: 1.0,  min: 0,   max: 5,  step: 0.01, label: 'Velocity Scale', layerParam: true  },
 
 
 
@@ -36,7 +36,7 @@ export const CONFIG_SCHEMA = {
 
   PRESSURE_ITERATIONS:{ default: 50,   min: 1,   max: 200, type: 'int', label: 'Pressure Iterations' },
 
-  CURL:               { default: 30,   min: 0,   max: 100, step: 0.1, label: 'Curl Strength' },
+  CURL:               { default: 30,   min: 0,   max: 100, step: 0.1, label: 'Curl Strength', layerParam: true  },
 
 
 
@@ -90,15 +90,15 @@ export const CONFIG_SCHEMA = {
 
   WIND_SCALE:         { default: 0.05, min: 0, max: 2, step: 0.001, label: 'Wind Scale', id: 'windScale', layerParam: true },
 
-  WIND_TYPE:          { default: 8, min: 0, max: 10, step: 1, type: 'int', label: 'Wind Type' },
+  WIND_TYPE:          { default: 8, min: 0, max: 10, step: 1, type: 'int', label: 'Wind Type', layerParam: true  },
 
 
 
   // -------------------- BDRF Material Params --------------------
 
-  BDRF_DIFFUSE:       { default: 0.196,   min: 0, max: 1, step: 0.0001, label: 'BDRF Diffuse' },
+  BDRF_DIFFUSE:       { default: 0.196,   min: 0, max: 1, step: 0.0001, label: 'BDRF Diffuse', layerParam: true  },
 
-  BDRF_NORMALS:       { default: 0.081352,min: 0, max: 1, step: 0.0001, label: 'BDRF Normals' },
+  BDRF_NORMALS:       { default: 0.081352,min: 0, max: 1, step: 0.0001, label: 'BDRF Normals' , layerParam: true },
 
   BDRF_FRESNAL:       { default: 0.105,   min: 0, max: 1, step: 0.0001, label: 'BDRF Fresnel' },
 
@@ -108,7 +108,7 @@ export const CONFIG_SCHEMA = {
 
 
 
-  LUT:                { default: 1.0, min: 0, max: 1, step: 0.01, label: 'LUT Mix' },
+  LUT:                { default: 1.0, min: 0, max: 1, step: 0.01, label: 'LUT Mix', layerParam: true  },
 
 
 

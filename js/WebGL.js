@@ -369,17 +369,17 @@ export function wrap (value, min, max) {
 }
 
 export function getResolution (resolution) {
-    let aspectRatio = gl.drawingBufferWidth / gl.drawingBufferHeight;
+    let aspectRatio = window.innerWidth / window.innerHeight;
     if (aspectRatio < 1)
         aspectRatio = 1.0 / aspectRatio;
 
-    let min = Math.round(resolution);
-    let max = Math.round(resolution * aspectRatio);
+    let w = Math.round(resolution);
+    let h = Math.round(resolution / aspectRatio);
 
     if (gl.drawingBufferWidth > gl.drawingBufferHeight)
-        return { width: max, height: min };
+        return { width: w, height: h };
     else
-        return { width: min, height: max };
+        return { width: h, height: w };
 }
 
 export function getTextureScale (texture, width, height) {
@@ -641,7 +641,16 @@ export function resizeCanvas () {
 }
 
 export function isMobile () {
-    return /Mobi|Android/i.test(navigator.userAgent);
+    try {
+        if (navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean') {
+            return navigator.userAgentData.mobile === true;
+        }
+    } catch (e) { /* ignore */ }
+    const hasCoarsePointer = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    const hasTouch = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0);
+    const ua = navigator.userAgent || '';
+    const uaMobile = /Mobi|Android|iPhone|iPad|iPod|Windows Phone/i.test(ua);
+    return !!(hasCoarsePointer || hasTouch || uaMobile);
 }
 
 
