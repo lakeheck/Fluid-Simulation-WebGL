@@ -447,18 +447,100 @@ uniform vec2 point;
 uniform float radius;
 uniform float uVelocityScale;
 uniform sampler2D uDensityMap;
-uniform sampler2D uForceMap;
-uniform sampler2D uWindMap;
+
+// Wind controls (copied from wind shader)
+uniform float uGlobalWindScale, uSmoothness, uWindMix;
+uniform vec2 uCenter;
+uniform float uWindPattern1, uWindPattern2;
+
+// Minimal baked-noise generation (fbm) for force field
+uniform float uTimeNoise;
+
+float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453123); }
+float noise(vec2 p){
+    vec2 i=floor(p), f=fract(p);
+    float a=hash(i);
+    float b=hash(i+vec2(1.0,0.0));
+    float c=hash(i+vec2(0.0,1.0));
+    float d=hash(i+vec2(1.0,1.0));
+    vec2 u=f*f*(3.0-2.0*f);
+    return mix(a,b,u.x) + (c-a)*u.y*(1.0-u.x) + (d-b)*u.x*u.y;
+}
+float fbm(vec2 p){
+    // baked constants (previous defaults)
+    float G = 0.5;      // gain
+    float lac = 2.0;    // lacunarity
+    float amp = 1.0;    // amplitude
+    int oct = 4;        // octaves
+    float v = 0.0;
+    float a = amp;
+    float f = 1.0;
+    for(int i=0;i<8;i++){
+        if(i>=oct) break;
+        v += a * noise(p * f);
+        f *= lac;
+        a *= G;
+    }
+    return v;
+}
+
+vec2 noiseVec(vec2 uv){
+    // animate with time; baked period
+    float period = 3.0;
+    vec2 p = uv * period + vec2(uTimeNoise * 0.1);
+    float nx = fbm(p + 13.7);
+    float ny = fbm(p + 41.3);
+    return vec2(nx, ny) * 2.0 - 1.0;
+}
+
+vec2 wind(vec2 uv, float thres, float smoothness, int windpattern) {
+    vec2 up = vec2(0.0, 1.0);
+    vec2 down = vec2(0.0, -1.0);
+    vec2 left = vec2(1.0, 0.0);
+    vec2 right = vec2(-1.0, 0.0);
+    vec2 w = vec2(0.0);
+    if( windpattern == 0) w = -vec2(smoothstep(0.0, thres, uv.s), 0.0);
+    else if( windpattern == 1) w = vec2(smoothstep(1.0-thres, 1.0, uv.s), 0.0);
+    else if( windpattern == 2 ) w = vec2(0.0, smoothstep(0.0, thres, uv.t));
+    else if( windpattern == 3 ) w = -vec2(0.0, smoothstep(1.0-thres, 1.0, uv.t));
+    else if( windpattern == 4 ) w = mix(right,left, smoothstep(thres-smoothness,thres+smoothness, uv.s));
+    else if( windpattern == 5 ) w = mix(up,down, smoothstep(thres-smoothness,thres+smoothness, uv.t));
+    else if( windpattern == 6 ) w = mix(left,right, smoothstep(thres-smoothness,thres+smoothness, uv.s));
+    else if( windpattern == 7 ) w = mix(up,down, smoothstep(thres-smoothness, thres+smoothness, uv.t));
+    else if( windpattern == 8) {
+        float thres1 = 1.0/3.0;
+        float thres2 = 2.0/3.0;
+        float m = smoothstep(thres1-smoothness, thres1+smoothness, uv.s);
+        m *= smoothstep(thres2+smoothness, thres2-smoothness, uv.s);
+        w = mix(down, up, m);
+    }
+    else if( windpattern == 9 ) w = mix(left, right, smoothstep(thres-smoothness, thres+smoothness, uv.t));
+    else if( windpattern == 10 ) {
+        vec2 coord = uv - uCenter;
+        w += -mix(up, down, smoothstep(thres-smoothness,thres+smoothness, coord.s));
+        w += mix(left, right, smoothstep(thres-smoothness,thres+smoothness, coord.t));
+        w = mix(w, -coord, 0.95);
+        w *= 1.0 / max(length(coord), 1e-4);
+    }
+    else {
+        vec2 coord = uv - uCenter;
+        w += -mix(up, down, smoothstep(thres-smoothness,thres+smoothness, coord.s));
+        w += mix(left, right, smoothstep(thres-smoothness,thres+smoothness, coord.t));
+        w = mix(w, -coord, 0.95);
+        w *= 1.0 / max(length(coord), 1e-4);
+    }
+    return w;
+}
 
 void main () {
     vec2 p = vUv - point.xy;
     p.x *= aspectRatio;
     vec3 splat = vec3(0.0);
     splat = smoothstep(0.0, 1.0, texture2D(uDensityMap, vUv).xyz);
-    vec3 force = texture2D(uForceMap, vUv).rgb * uVelocityScale;
-    vec3 wind = texture2D(uWindMap, vUv.st).rgb;
-    force += wind;
-    force.z = 0.0;
+    // Generate procedural force (noise + wind)
+    vec2 fNoise = noiseVec(vUv) * uVelocityScale;
+    vec2 fWind = wind(vUv, 0.5, uSmoothness, int(uWindPattern1)) * uGlobalWindScale;
+    vec3 force = vec3(mix(fNoise, fWind, clamp(uWindMix, 0.0, 1.0)), 0.0);
     vec3 base = texture2D(uTarget, vUv).xyz;
     gl_FragColor = vec4(base + (force), 1.0);
 }
@@ -709,14 +791,14 @@ vec2 wind(vec2 uv, float thres, float smoothness, int windpattern) {
 		wind += -mix(up, down, smoothstep(thres-smoothness, thres+smoothness, coord.s));
 		wind += mix(left, right, smoothstep(thres-smoothness, thres+smoothness, coord.t));
 		wind = mix(wind, -coord, 0.95);
-        wind *= 1.0 / max(length(coord), 1e-4);
+    wind *= max(length(coord), 1e-4);
 	}
 	else { //default to circle / sink blend
 		vec2 coord = uv.st - uCenter;
 		wind += -mix(up, down, smoothstep(thres-smoothness, thres+smoothness, coord.s));
 		wind += mix(left, right, smoothstep(thres-smoothness, thres+smoothness, coord.t));
-		wind = mix(wind, -coord, 0.95);
-        wind *= 1.0 / max(length(coord), 1e-4);
+	  wind = mix(wind, -coord, 0.95);
+    wind *= 1.0 / max(length(coord), 1e-4);
 	}
 
 	return wind;
@@ -726,7 +808,6 @@ void main()
 {
 	//mix the two patterns
     vec2 uv = vUv.st;
-    vec2 coord = uv.st - uCenter;
     vec2 w = vec2(0.);
     w = wind(vUv, 0.5, uSmoothness, int(uWindPattern1));
     vec4 color = vec4(w * uGlobalWindScale, 0.0, 1.0);
