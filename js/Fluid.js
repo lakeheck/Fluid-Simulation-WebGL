@@ -212,10 +212,10 @@ export class Fluid{
     step (dt) {
         gl.disable(gl.BLEND);
 
-        this.domainWarpProgram.bind();
-        gl.uniform1f(this.domainWarpProgram.uniforms.u_time, Date.now()); 
-        gl.uniform3f(this.domainWarpProgram.uniforms.u_seed, 0,0,0); 
-        LGL.blit(this.picture);
+        // this.domainWarpProgram.bind();
+        // gl.uniform1f(this.domainWarpProgram.uniforms.u_time, Date.now()); 
+        // gl.uniform3f(this.domainWarpProgram.uniforms.u_seed, 0,0,0); 
+        // LGL.blit(this.picture);
         
         
         this.noiseProgram.bind();
