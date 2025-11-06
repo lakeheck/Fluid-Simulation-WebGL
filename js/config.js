@@ -37,7 +37,7 @@ export const CONFIG_SCHEMA = {
   GAIN:               { default: 0.5, min: 0, max: 1, step: 0.01, label: 'Gain' },
   OCTAVES:            { default: 4,   min: 1, max: 12, type: 'int', label: 'Octaves' },
   MONO:               { default: false, type: 'bool', label: 'Monochrome' },
-  NOISE_TRANSLATE_SPEED:{ default: 0.025, min: 0, max: .15, step: 0.001, label: 'Noise Translate Speed' },
+  NOISE_TRANSLATE_SPEED:{ default: 0.0015, min: 0, max: .025, step: 0.001, label: 'Noise Translate Speed' },
 
   // -------------------- Control / Misc --------------------
   PAUSED:             { default: false, type: 'bool', label: 'Paused', id: 'paused', layerParam: true },

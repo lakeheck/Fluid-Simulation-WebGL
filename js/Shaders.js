@@ -665,11 +665,13 @@ void main () {
 
     vec3 splat = vec3(0);
 
-    float noise = texture(uNoise, vUv).r;
-    int pal1 = int(uPaletteA);
-    int pal2 = int(uPaletteB);
-    vec4[5] pal = mixPalette(getPalette(pal1),getPalette(pal2),uPaletteMix);
-    splat = lookupColor(noise, pal).rgb;
+    vec2 noise = texture(uNoise, vUv).rg;
+    // int pal1 = int(uPaletteA);
+    // int pal2 = int(uPaletteB);
+    // vec4[5] pal = mixPalette(getPalette(pal1),getPalette(pal2),uPaletteMix);
+    // splat = lookupColor(noise, pal).rgb;
+
+    splat = texture(uColor, fract(noise.rg)).rgb;
 
     splat = smoothstep(0.0, 1.0, splat);
     splat *= uFlow;

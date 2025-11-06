@@ -56,7 +56,7 @@ export class Fluid{
     noise;
     wind;
 
-    picture = LGL.createTextureAsync('img/colored_noise_bg.jpg');
+    picture = LGL.createTextureAsync('img/gold-pal.jpg');
     ditheringTexture = LGL.createTextureAsync('img/colored_noise_bg.jpg');
 
     initFramebuffers () {
@@ -311,12 +311,16 @@ export class Fluid{
             // density mask
             gl.uniform1i(this.splatVelProgram.uniforms.uDensityMap, this.picture.attach(1));
             // wind + noise uniforms (match splatVelShader)
+            const t = Date.now() * 0.001;
+            const cx = 0.5 + 0.2 * Math.cos(t * 0.1);
+            const cy = 0.5 + 0.2 * Math.sin(t * 0.13);
+            const p2 = Math.floor((t * 0.25) % 11.0); // cycle wind pattern 0..10
             gl.uniform1f(this.splatVelProgram.uniforms.uGlobalWindScale, config.WIND_SCALE);
             gl.uniform1f(this.splatVelProgram.uniforms.uSmoothness, 0.1);
             gl.uniform1f(this.splatVelProgram.uniforms.uWindMix, 0.5);
-            gl.uniform2f(this.splatVelProgram.uniforms.uCenter, 0.5, 0.5);
+            gl.uniform2f(this.splatVelProgram.uniforms.uCenter, cx, cy);
             gl.uniform1f(this.splatVelProgram.uniforms.uWindPattern1, config.WIND_TYPE);
-            gl.uniform1f(this.splatVelProgram.uniforms.uWindPattern2, 10.0);
+            gl.uniform1f(this.splatVelProgram.uniforms.uWindPattern2, p2);
             gl.uniform1f(this.splatVelProgram.uniforms.uTimeNoise, this.noiseSeed);
             gl.uniform1f(this.splatVelProgram.uniforms.aspectRatio, canvas.width / canvas.height);
             gl.uniform1f(this.splatVelProgram.uniforms.uVelocityScale, config.VELOCITYSCALE);
@@ -338,8 +342,7 @@ export class Fluid{
             gl.uniform1i(this.splatColorProgram.uniforms.uColor, this.picture.attach(1)); //color map
             gl.uniform1i(this.splatColorProgram.uniforms.uDensityMap, this.picture.attach(2)); //density map
             gl.uniform1i(this.splatColorProgram.uniforms.uNoise, this.noise.read.attach(3)); //noise map
-            gl.uniform1i(this.splatColorProgram.uniforms.uPaletteA, config.PALETTE_A);
-            gl.uniform1i(this.splatColorProgram.uniforms.uPaletteB, config.PALETTE_B);
+            gl.uniform1f(this.splatColorProgram.uniforms.uPaletteMix, config.PALETTE_MIX);
             gl.uniform1i(this.splatVelProgram.uniforms.uClick, 0);
             gl.uniform1f(this.splatColorProgram.uniforms.radius, this.correctRadius(config.SPLAT_RADIUS / 100.0));
             LGL.blit(this.dye.write);
