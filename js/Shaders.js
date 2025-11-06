@@ -48,7 +48,39 @@ void main () {
 `);
 
 
+export const LUTShader = compileShader(gl.FRAGMENT_SHADER, `#version 300 es
+#ifdef GL_ES
+precision mediump float;
+precision mediump sampler3D;
+precision mediump sampler2D;
+#endif
 
+uniform sampler3D u_LUT;
+uniform float u_LUTSize;
+uniform float u_LUTMix;
+uniform sampler2D sTexture;
+
+in vec2 vUv;
+out vec4 fragColor;
+// A helper function to apply the 3D LUT.
+// It assumes color values are in the [0,1] range.
+vec3 applyLUT(vec3 color, sampler3D lut, float size) {
+    if(size > 0.0) {
+        color = clamp(color, 0.0, 1.0);
+        float scale = (size - 1.0) / size;
+        float offset = 0.5 / size;
+        vec3 lutCoord = color * scale + offset;
+        return texture(lut, lutCoord).rgb;
+    }
+    return color;
+}
+
+void main() {
+    vec3 color = texture(sTexture, vUv).rgb;
+    vec3 lutColor = applyLUT(color, u_LUT, u_LUTSize);
+    fragColor = vec4(mix(color, lutColor, u_LUTMix), 1.0);
+}
+`)
 
 //create a vertex shader with blurred coordiates for neighbors 
 //just horizontal blur
@@ -683,7 +715,7 @@ void main () {
     force += wind;
     force.z = 0.0;
     vec3 base = texture2D(uTarget, vUv).xyz;
-    gl_FragColor = vec4(base + wind, 1.0);
+    gl_FragColor = vec4(base + (force), 1.0);
 }
 `);
 
@@ -702,6 +734,8 @@ uniform float uFlow;
 uniform int uClick;
 uniform sampler2D uDensityMap;
 uniform sampler2D uColor;
+
+
 
 void main () {
     vec2 p = vUv - point.xy;
