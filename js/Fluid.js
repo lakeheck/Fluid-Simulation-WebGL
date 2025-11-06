@@ -17,6 +17,7 @@ export class Fluid{
         this.colorUpdateTimer = 0.0;
         this.lutTex = null;
         this.lutReady = false;
+        this.lutSize = 0.0;
     }
     
     splatStack = [];
@@ -127,11 +128,9 @@ export class Fluid{
             // Set uniforms
             // sTexture = your post buffer (likely on unit 0). Keep your existing binding for it.
             // Bind LUT to unit 1 and pass size/mix uniforms.
-            this.LUTProgram.bind();
-            gl.uniform1i(this.LUTProgram.uniforms.u_LUT, 1);
-            gl.uniform1f(this.LUTProgram.uniforms.u_LUTSize, size);
             this.lutTex = lutTex;
             this.lutReady = true;
+            this.lutSize = size;
                       
             console.log('LUT loaded (WebGL2 3D):', size);
         })
@@ -139,16 +138,9 @@ export class Fluid{
 
     }
 
-    updateKeywords () {
-        let displayKeywords = [];
-        if (config.SHADING) displayKeywords.push("SHADING");
-        if (config.BLOOM) displayKeywords.push("BLOOM");
-        if (config.SUNRAYS) displayKeywords.push("SUNRAYS");
-        this.displayMaterial.setKeywords(displayKeywords);
-    }
     
     simulate(){
-        this.updateKeywords();
+        // this.updateKeywords();
         this.initFramebuffers();
         this.multipleSplats(parseInt(Math.random() * 20) + 5);
         this.noiseSeed = 0.0; 
@@ -341,7 +333,7 @@ export class Fluid{
     drawDisplay (target) {
         let width = target == null ? gl.drawingBufferWidth : target.width;
         let height = target == null ? gl.drawingBufferHeight : target.height;
-        //BRDF lighting pass
+        // BRDF lighting + LUT (guarded)
         this.pbrProgram.bind();
         gl.uniform1i(this.pbrProgram.uniforms.sTexture, this.dye.read.attach(0));
         gl.uniform2f(this.pbrProgram.uniforms.uRes, width, height);
@@ -352,17 +344,17 @@ export class Fluid{
         gl.uniform1f(this.pbrProgram.uniforms.uSpec, config.BDRF_SPECULAR);
         gl.uniform1f(this.pbrProgram.uniforms.uWetDry, .5);
         gl.uniform1f(this.pbrProgram.uniforms.uNormalScale, config.BDRF_NORMALS);
-        LGL.blit(this.post);
 
-        this.LUTProgram.bind();
-        // Ensure distinct units and proper binding for sampler2D vs sampler3D
-        if (this.lutReady && this.lutTex) {
+        if (this.lutReady && this.lutTex && this.lutSize > 0) {
             gl.activeTexture(gl.TEXTURE1);
             gl.bindTexture(gl.TEXTURE_3D, this.lutTex);
-            gl.uniform1i(this.LUTProgram.uniforms.u_LUT, 1);
+            gl.uniform1i(this.pbrProgram.uniforms.u_LUT, 1);
+            gl.uniform1f(this.pbrProgram.uniforms.u_LUTSize, this.lutSize);
+            gl.uniform1f(this.pbrProgram.uniforms.u_LUTMix, config.LUT);
+        } else {
+            gl.uniform1f(this.pbrProgram.uniforms.u_LUTSize, 0.0);
+            gl.uniform1f(this.pbrProgram.uniforms.u_LUTMix, 0.0);
         }
-        gl.uniform1i(this.LUTProgram.uniforms.sTexture, this.post.attach(0));
-        gl.uniform1f(this.LUTProgram.uniforms.u_LUTMix, this.lutReady ? config.LUT : 0.0);
 
         LGL.blit(target);
     }

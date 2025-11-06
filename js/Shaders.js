@@ -749,6 +749,7 @@ export const bdrfShader = compileShader(gl.FRAGMENT_SHADER, `#version 300 es
 
 #ifdef GL_ES
 precision mediump sampler2D; 
+precision mediump sampler3D;
 precision mediump float;
 #endif
 
@@ -758,6 +759,9 @@ out vec4 fragColor;
 
 in vec2 vUv;
 uniform sampler2D sTexture;
+uniform sampler3D u_LUT;
+uniform float u_LUTSize;
+uniform float u_LUTMix;
 
 uniform vec2 uRes;
 uniform float uNormalScale;
@@ -861,6 +865,17 @@ float saturate (float x) {
     return clamp(x, 0.0, 1.0);
 }
 
+vec3 change_luminance(vec3 c_in, float l_out){
+    float l_in = luminance(c_in);
+    return c_in * (l_out / l_in);
+}
+vec3 reinhard_extended_luminance(vec3 v, float max_white_l){
+    float l_old = luminance(v);
+    float numerator = l_old * (1.0f + (l_old / (max_white_l * max_white_l)));
+    float l_new = numerator / (1.0f + l_old);
+    return change_luminance(v, l_new);
+}
+
 float specularBRDF (vec3 lightDirection, vec3 eyeDirection, vec3 normal, float roughness, float F0) {
     vec3 halfVector = normalize(lightDirection + eyeDirection);
 
@@ -881,6 +896,7 @@ void main () {
     vec2 coordinates = vUv;
 
     vec4 value = samplePaintTexture(coordinates); //r, g, b, height
+    // value.rgb = reinhard_extended_luminance(value.rgb, 2.0);
 
     vec2 gradient = computeGradient(coordinates);
     vec3 normal = normalize(vec3(
@@ -903,8 +919,17 @@ void main () {
     vec3 surfaceColor = color * diffuse + specular * uSpec;
     
     surfaceColor = mix(color, surfaceColor, uWetDry);
+    // Apply 3D LUT mix inside BRDF pass
+    vec3 lutColor = surfaceColor;
+    if (u_LUTSize > 0.0 && u_LUTMix > 0.001) {
+        vec3 c = clamp(surfaceColor, 0.0, 1.0);
+        float scale = (u_LUTSize - 1.0) / u_LUTSize;
+        float offset = 0.5 / u_LUTSize;
+        vec3 coord = c * scale + offset;
+        lutColor = texture(u_LUT, coord).rgb;
+    }
 
-	fragColor = vec4(surfaceColor, 1.0);
+	fragColor = vec4(mix(surfaceColor, lutColor, clamp(u_LUTMix, 0.0, 1.0)), 1.0);
 }
 `);
 
