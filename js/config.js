@@ -12,6 +12,8 @@ export const CONFIG_SCHEMA = {
 
   CAPTURE_RESOLUTION: { default: 1024, type: 'int',  label: 'Capture Resolution' },
 
+  FORCE_ASPECT: {default: true, type: 'bool'},
+
 
 
   // -------------------- Fluid Dynamics --------------------

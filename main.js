@@ -131,7 +131,6 @@ class App {
   constructor() {
     // Simulation parameters for our sim shader.
     this.playing = true;
-    this.windScale = config.WIND_SCALE;
   }
   setPlaying(value) {
     this.playing = value;
@@ -145,8 +144,14 @@ globalThis.addEventListener("layer:dimensionschange", (event) => {
   canvas.width = event.detail.width;
   canvas.height = event.detail.height;
 });
-globalThis.addEventListener("layer:play", () => { app.playing = true; });
-globalThis.addEventListener("layer:pause", () => { app.playing = false; });
+globalThis.addEventListener("layer:play", () => {
+  config.PAUSED = false;
+  app.setPlaying(true);
+});
+globalThis.addEventListener("layer:pause", () => {
+  config.PAUSED = true;
+  app.setPlaying(false);
+});
 globalThis.addEventListener("layer:paramchange", (event) => {
   const toCamel = (s) => s.toLowerCase().replace(/_([a-z])/g, (_, c) => c.toUpperCase());
   const idToKey = Object.entries(CONFIG_SCHEMA)
@@ -203,5 +208,5 @@ globalThis.addEventListener("layer:paramchange", (event) => {
 addEventListener('message', (event) => {
 	if (typeof event.data !== 'string') return;
 	if (!event.data.startsWith('layer:')) return;
-	console.log(event.data);
+	// console.log(event.data);
 });

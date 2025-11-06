@@ -15,6 +15,8 @@ export class Fluid{
         this.lastUpdateTime = 0.0;
         this.noiseSeed = 0.0;
         this.colorUpdateTimer = 0.0;
+        this.lutTex = null;
+        this.lutReady = false;
     }
     
     splatStack = [];
@@ -65,9 +67,9 @@ export class Fluid{
 
 
     initFramebuffers () {
-        let simRes = LGL.getResolution(config.SIM_RESOLUTION);//getResolution basically just applies view aspect ratio to the passed resolution 
-        let dyeRes = LGL.getResolution(config.DYE_RESOLUTION);//getResolution basically just applies view aspect ratio to the passed resolution 
-        let palRes = LGL.getResolution(config.PALETTE_RESOLUTION);
+        let simRes = LGL.getResolution(config.SIM_RESOLUTION,  config.FORCE_ASPECT);//getResolution basically just applies view aspect ratio to the passed resolution 
+        let dyeRes = LGL.getResolution(config.DYE_RESOLUTION,  config.FORCE_ASPECT);//getResolution basically just applies view aspect ratio to the passed resolution 
+        let palRes = LGL.getResolution(config.PALETTE_RESOLUTION, config.FORCE_ASPECT);
         console.log(simRes,dyeRes,palRes);
         const texType = ext.halfFloatTexType; 
         const rgba    = ext.formatRGBA;
@@ -141,6 +143,8 @@ export class Fluid{
             this.LUTProgram.bind();
             gl.uniform1i(this.LUTProgram.uniforms.u_LUT, 1);
             gl.uniform1f(this.LUTProgram.uniforms.u_LUTSize, size);
+            this.lutTex = lutTex;
+            this.lutReady = true;
                       
             console.log('LUT loaded (WebGL2 3D):', size);
         })
@@ -396,8 +400,14 @@ export class Fluid{
         LGL.blit(this.post);
 
         this.LUTProgram.bind();
+        // Ensure distinct units and proper binding for sampler2D vs sampler3D
+        if (this.lutReady && this.lutTex) {
+            gl.activeTexture(gl.TEXTURE1);
+            gl.bindTexture(gl.TEXTURE_3D, this.lutTex);
+            gl.uniform1i(this.LUTProgram.uniforms.u_LUT, 1);
+        }
         gl.uniform1i(this.LUTProgram.uniforms.sTexture, this.post.attach(0));
-        gl.uniform1f(this.LUTProgram.uniforms.u_LUTMix, config.LUT);
+        gl.uniform1f(this.LUTProgram.uniforms.u_LUTMix, this.lutReady ? config.LUT : 0.0);
 
         LGL.blit(target);
     }

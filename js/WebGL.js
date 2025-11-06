@@ -368,10 +368,14 @@ export function wrap (value, min, max) {
     return (value - min) % range + min;
 }
 
-export function getResolution (resolution) {
+export function getResolution (resolution, forceAspect) {
     let aspectRatio = window.innerWidth / window.innerHeight;
     if (aspectRatio < 1)
         aspectRatio = 1.0 / aspectRatio;
+
+    if(forceAspect){
+        aspectRatio = 1.0;
+    }
 
     let w = Math.round(resolution);
     let h = Math.round(resolution / aspectRatio);
