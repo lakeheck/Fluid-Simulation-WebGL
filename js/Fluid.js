@@ -277,7 +277,7 @@ export class Fluid{
         LGL.blit(this.pressure.write);
         this.pressure.swap();
         
-        this.pressureProgram.bind();
+         this.pressureProgram.bind();
         gl.uniform2f(this.pressureProgram.uniforms.texelSize, this.velocity.texelSizeX, this.velocity.texelSizeY);
         gl.uniform1i(this.pressureProgram.uniforms.uDivergence, this.divergence.attach(0));
         for (let i = 0; i < config.PRESSURE_ITERATIONS; i++) {
@@ -292,7 +292,7 @@ export class Fluid{
         gl.uniform1i(this.gradientSubtractProgram.uniforms.uVelocity, this.velocity.read.attach(1));
         LGL.blit(this.velocity.write);
         this.velocity.swap();
-    
+
         if(config.FORCE_MAP_ENABLE){
             this.splatVelProgram.bind();
             gl.uniform1i(this.splatVelProgram.uniforms.uTarget, this.velocity.read.attach(0)); 
