@@ -46,7 +46,6 @@ export class Fluid{
     windProgram               = new LGL.Program(GLSL.baseVertexShader, GLSL.windShader);
     pbrProgram                = new LGL.Program(GLSL.noiseVertexShader, GLSL.bdrfShader); //noise generator 
     LUTProgram                = new LGL.Program(GLSL.noiseVertexShader, GLSL.LUTShader);
-    domainWarpProgram         = new LGL.Program(GLSL.noiseVertexShader, GLSL.domainWarpShader);
 
     dye;
     velocity;
@@ -63,7 +62,7 @@ export class Fluid{
         'img/gold-pal.jpg',
         'img/blue-pal.jpg',
         'img/red-pal.jpg',
-        'img/purp-pal.jpg'
+        'img/ramp1.jpg'
     ]);
 
     initFramebuffers () {
@@ -87,7 +86,7 @@ export class Fluid{
         }
         else {//resize if needed 
             // this.dye = LGL.resizeDoubleFBO(this.dye, dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering); // TODO this line is causing the horizontal bars on window resize
-            this.noise = LGL.resizeDoubleFBO(this.noise, simRes.width, simRes.height, rg.internalFormat, rg.format, texType, filtering);
+            this.noise = LGL.resizeDoubleFBO(this.noise, simRes.width/2, simRes.height/2, rg.internalFormat, rg.format, texType, filtering);
         }
         if (this.velocity == null){
             this.velocity = LGL.createDoubleFBO(simRes.width, simRes.height, rg.internalFormat, rg.format, texType, filtering);
@@ -100,9 +99,7 @@ export class Fluid{
         this.divergence = LGL.createFBO      (simRes.width, simRes.height, r.internalFormat, r.format, texType, gl.NEAREST);
         this.curl       = LGL.createFBO      (simRes.width, simRes.height, r.internalFormat, r.format, texType, gl.NEAREST);
         this.pressure   = LGL.createDoubleFBO(simRes.width, simRes.height, r.internalFormat, r.format, texType, gl.NEAREST);
-        this.wind       = LGL.createFBO      (simRes.width/2, simRes.height/2, rgba.internalFormat, rgba.format, texType, gl.LINEAR);
         this.post       = LGL.createFBO      (dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, gl.LINEAR);
-        this.palette    = LGL.createFBO      (palRes.width, palRes.height, rgba.internalFormat, rgba.format, texType, gl.LINEAR);
 
         fetch('lut/maelstrom_gold.cube')
         .then(r => r.text())
@@ -356,6 +353,8 @@ export class Fluid{
             const palA = Math.min(Math.max((config.PALETTE_A|0), 0), depth - 1);
             const palB = Math.min(Math.max((config.PALETTE_B|0), 0), depth - 1);
             gl.uniform1i(this.splatColorProgram.uniforms.uPaletteA, palA);
+            gl.uniform1f(this.splatColorProgram.uniforms.uPaletteRemap, config.PALETTE_REMAP);
+            gl.uniform1f(this.splatColorProgram.uniforms.uPaletteMultiply, config.PALETTE_MULTIPLY);
             gl.uniform1i(this.splatColorProgram.uniforms.uPaletteB, palB);
             gl.uniform1f(this.splatColorProgram.uniforms.uPalettePeriod, config.PALETTE_PERIOD);
             gl.uniform1i(this.splatVelProgram.uniforms.uClick, 0);
@@ -574,6 +573,8 @@ export class Fluid{
         addFromSchema(fluidFolder, 'PALETTE_B');
         addFromSchema(fluidFolder, 'PALETTE_MIX');
         addFromSchema(fluidFolder, 'PALETTE_PERIOD');
+        addFromSchema(fluidFolder, 'PALETTE_REMAP');
+        addFromSchema(fluidFolder, 'PALETTE_MULTIPLY');
         fluidFolder.open();
         
 		const pausedCtrl = addFromSchema(gui, 'PAUSED');

@@ -12,6 +12,8 @@ export const CONFIG_SCHEMA = {
   PALETTE_B: { default: 1, min: 0, max: 4, type: 'int', label: 'Palette B', layerParam: true },
   PALETTE_MIX: { default: 0.5, min: 0, max: 1, step: 0.01, label: 'Palette Mix', layerParam: true },
   PALETTE_PERIOD: { default: 3.0, min: 1, max: 5, step: 0.01, label: 'Palette Period', layerParam: true },
+  PALETTE_REMAP: { default: 0.0, min: 0, max: 1, step: 0.01, label: 'Palette Remap', layerParam: true },
+  PALETTE_MULTIPLY: { default: 0.0, min: 0, max: 1, step: 0.01, label: 'Palette Multiply', layerParam: true },
   FORCE_ASPECT: {default: false, type: 'bool'},
   // -------------------- Fluid Dynamics --------------------
   ASPECT:             { default: 1.0,  min: 0.1, max: 5,  step: 0.01, label: 'Aspect' },
