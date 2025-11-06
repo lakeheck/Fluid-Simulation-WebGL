@@ -8,9 +8,10 @@ export const CONFIG_SCHEMA = {
   DYE_RESOLUTION:     { default: 2160, type: 'int',  label: 'Output Resolution' },
   PALETTE_RESOLUTION: { default: 512,  type: 'int',  label: 'Palette Resolution' },
   CAPTURE_RESOLUTION: { default: 1024, type: 'int',  label: 'Capture Resolution' },
-  PALETTE_A: { default: 2, min: 0, max: 4, type: 'int', label: 'Palette A', layerParam: true },
-  PALETTE_B: { default: 2, min: 0, max: 4, type: 'int', label: 'Palette B', layerParam: true },
+  PALETTE_A: { default: 0, min: 0, max: 4, type: 'int', label: 'Palette A', layerParam: true },
+  PALETTE_B: { default: 0, min: 0, max: 4, type: 'int', label: 'Palette B', layerParam: true },
   PALETTE_MIX: { default: 0.5, min: 0, max: 1, step: 0.01, label: 'Palette Mix', layerParam: true },
+  PALETTE_PERIOD: { default: 3.0, min: 1, max: 5, step: 0.01, label: 'Palette Period', layerParam: true },
   FORCE_ASPECT: {default: false, type: 'bool'},
   // -------------------- Fluid Dynamics --------------------
   ASPECT:             { default: 1.0,  min: 0.1, max: 5,  step: 0.01, label: 'Aspect' },

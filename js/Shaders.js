@@ -549,6 +549,7 @@ void main () {
 export const splatColorShader = compileShader(gl.FRAGMENT_SHADER, `#version 300 es
 precision highp float;
 precision highp sampler2D;
+precision highp sampler2DArray;
 
 in vec2 vUv;
 out vec4 fragColor;
@@ -564,8 +565,11 @@ uniform sampler2D uDensityMap;
 uniform sampler2D uColor;
 uniform sampler2D uNoise;
 
-uniform int uPaletteA,uPaletteB;
+uniform sampler2DArray uPaletteArray;
+uniform int uPaletteA;
+uniform int uPaletteB;
 uniform float uPaletteMix;
+uniform float uPalettePeriod;
 //////// COLOR PALETTES ////////
 vec4 palette1[5] = vec4[5](
   vec4(200.0/255.0, 192.0/255.0, 184.0/255.0, 1.0),
@@ -665,14 +669,10 @@ void main () {
 
     vec3 splat = vec3(0);
 
-    vec2 noise = texture(uNoise, vUv).rg;
-    // int pal1 = int(uPaletteA);
-    // int pal2 = int(uPaletteB);
-    // vec4[5] pal = mixPalette(getPalette(pal1),getPalette(pal2),uPaletteMix);
-    // splat = lookupColor(noise, pal).rgb;
-
-    splat = texture(uColor, fract(noise.rg)).rgb;
-
+    vec2 noise = texture(uNoise, vUv/uPalettePeriod).rg;
+    vec3 colA = texture(uPaletteArray, vec3(fract(noise), float(max(0, uPaletteA)))).rgb;
+    vec3 colB = texture(uPaletteArray, vec3(fract(noise), float(max(0, uPaletteB)))).rgb;
+    splat = mix(colA, colB, clamp(uPaletteMix, 0.0, 1.0));
     splat = smoothstep(0.0, 1.0, splat);
     splat *= uFlow;
     vec3 base = texture(uTarget, vUv).xyz;

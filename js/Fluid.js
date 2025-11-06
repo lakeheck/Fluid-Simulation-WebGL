@@ -57,7 +57,14 @@ export class Fluid{
     wind;
 
     picture = LGL.createTextureAsync('img/gold-pal.jpg');
-    ditheringTexture = LGL.createTextureAsync('img/colored_noise_bg.jpg');
+    ditheringTexture = LGL.createTextureAsync('img/LDR_LLL1_0.png');
+    // Palette texture array (layers are 1D gradients stored as 2D images)
+    paletteArray = LGL.createTexture2DArrayAsync([
+        'img/gold-pal.jpg',
+        'img/blue-pal.jpg',
+        'img/red-pal.jpg',
+        'img/purp-pal.jpg'
+    ]);
 
     initFramebuffers () {
         let simRes = LGL.getResolution(config.SIM_RESOLUTION,  config.FORCE_ASPECT);//getResolution basically just applies view aspect ratio to the passed resolution 
@@ -343,6 +350,14 @@ export class Fluid{
             gl.uniform1i(this.splatColorProgram.uniforms.uDensityMap, this.picture.attach(2)); //density map
             gl.uniform1i(this.splatColorProgram.uniforms.uNoise, this.noise.read.attach(3)); //noise map
             gl.uniform1f(this.splatColorProgram.uniforms.uPaletteMix, config.PALETTE_MIX);
+            // bind palette array and pass clamped layer indices
+            gl.uniform1i(this.splatColorProgram.uniforms.uPaletteArray, this.paletteArray.attach(4));
+            const depth = Math.max(1, this.paletteArray.depth || 1);
+            const palA = Math.min(Math.max((config.PALETTE_A|0), 0), depth - 1);
+            const palB = Math.min(Math.max((config.PALETTE_B|0), 0), depth - 1);
+            gl.uniform1i(this.splatColorProgram.uniforms.uPaletteA, palA);
+            gl.uniform1i(this.splatColorProgram.uniforms.uPaletteB, palB);
+            gl.uniform1f(this.splatColorProgram.uniforms.uPalettePeriod, config.PALETTE_PERIOD);
             gl.uniform1i(this.splatVelProgram.uniforms.uClick, 0);
             gl.uniform1f(this.splatColorProgram.uniforms.radius, this.correctRadius(config.SPLAT_RADIUS / 100.0));
             LGL.blit(this.dye.write);
@@ -558,6 +573,7 @@ export class Fluid{
         addFromSchema(fluidFolder, 'PALETTE_A');
         addFromSchema(fluidFolder, 'PALETTE_B');
         addFromSchema(fluidFolder, 'PALETTE_MIX');
+        addFromSchema(fluidFolder, 'PALETTE_PERIOD');
         fluidFolder.open();
         
 		const pausedCtrl = addFromSchema(gui, 'PAUSED');

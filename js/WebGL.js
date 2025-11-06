@@ -389,6 +389,81 @@ export function createTextureAsync (url) {
     return obj;
 }
 
+// Creates a WebGL2 2D texture array from a set of image URLs (all layers resized to a common size).
+// Returns an object with { texture, width, height, depth, attach(unit) }.
+export function createTexture2DArrayAsync (urls) {
+    const isWebGL2 = !!gl.texImage3D;
+    if (!isWebGL2) {
+        console.warn('Texture2DArray requires WebGL2; falling back to single 2D texture.');
+        return createTextureAsync(urls[0]);
+    }
+
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, texture);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    // Placeholder 1x1x1
+    gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.RGBA8, 1, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255, 255, 255, 255]));
+
+    const obj = {
+        texture,
+        width: 1,
+        height: 1,
+        depth: 1,
+        attach (id) {
+            gl.activeTexture(gl.TEXTURE0 + id);
+            gl.bindTexture(gl.TEXTURE_2D_ARRAY, texture);
+            return id;
+        }
+    };
+
+    // Load all images
+    const loaders = urls.map(src => new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = src;
+    }));
+
+    Promise.all(loaders).then(images => {
+        // Choose common size (first image)
+        const w = images[0].naturalWidth || images[0].width;
+        const h = images[0].naturalHeight || images[0].height;
+        const d = images.length;
+
+        // Allocate final storage
+        gl.bindTexture(gl.TEXTURE_2D_ARRAY, texture);
+        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+        gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.RGBA8, w, h, d, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+
+        // Canvas to resample if needed
+        const canvasTmp = document.createElement('canvas');
+        const ctxTmp = canvasTmp.getContext('2d');
+        canvasTmp.width = w;
+        canvasTmp.height = h;
+
+        for (let layer = 0; layer < d; layer++) {
+            const img = images[layer];
+            ctxTmp.clearRect(0, 0, w, h);
+            ctxTmp.drawImage(img, 0, 0, w, h);
+            const data = ctxTmp.getImageData(0, 0, w, h).data;
+            gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, layer, w, h, 1, gl.RGBA, gl.UNSIGNED_BYTE, data);
+        }
+
+        obj.width = w;
+        obj.height = h;
+        obj.depth = d;
+    }).catch(err => {
+        console.error('Failed to create texture2DArray:', err);
+    });
+
+    return obj;
+}
+
 export function updateKeywords (config, displayMaterial) {
     let displayKeywords = [];
     if (config.SHADING) displayKeywords.push("SHADING");
