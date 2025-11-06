@@ -80,7 +80,7 @@ export class Fluid{
         }
         else {//resize if needed 
             // this.dye = LGL.resizeDoubleFBO(this.dye, dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering); // TODO this line is causing the horizontal bars on window resize
-            this.noise = LGL.resizeDoubleFBO(this.noise, dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
+            this.noise = LGL.resizeDoubleFBO(this.noise, simRes.width, simRes.height, rg.internalFormat, rg.format, texType, filtering);
         }
         if (this.velocity == null){
             this.velocity = LGL.createDoubleFBO(simRes.width, simRes.height, rg.internalFormat, rg.format, texType, filtering);

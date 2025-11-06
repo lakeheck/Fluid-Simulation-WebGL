@@ -272,15 +272,13 @@ return box(uv, vec2(.9), smoothEdges);
 vec4 rgbSimplex(vec3 st){
 float n1 = monoSimplex(st, 0.0); //take orig seed 
 float n2 = monoSimplex(st, uSeed +500.0);
-float n3 = monoSimplex(st, uSeed -500.0);
-return vec4(n1, n2, n3, 1.0);
+return vec4(n1, n2, 1.0, 1.0);
 }
 
 vec4 rgbSimplex(vec3 st, float seed){
 float n1 = monoSimplex(st, 0.0 + seed); //take orig seed 
 float n2 = monoSimplex(st, uSeed + 500.0 + seed);
-float n3 = monoSimplex(st, uSeed - 500.0 + seed);
-return vec4(n1, n2, n3, 1.0);
+return vec4(n1, n2, 1.0, 1.0);
 }
 
 
