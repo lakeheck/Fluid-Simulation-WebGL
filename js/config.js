@@ -4,8 +4,8 @@ export const CONFIG_SCHEMA = {
 
   // -------------------- Core Resolutions --------------------
 
-  SIM_RESOLUTION:     { default: 256,  type: 'int',  label: 'Sim Resolution' },
-  DYE_RESOLUTION:     { default: 512, type: 'int',  label: 'Output Resolution' },
+  SIM_RESOLUTION:     { default: 512,  type: 'int',  label: 'Sim Resolution' },
+  DYE_RESOLUTION:     { default: 1024, type: 'int',  label: 'Output Resolution' },
   PALETTE_RESOLUTION: { default: 128,  type: 'int',  label: 'Palette Resolution' },
   CAPTURE_RESOLUTION: { default: 1024, type: 'int',  label: 'Capture Resolution' },
   FORCE_ASPECT: {default: true, type: 'bool'},
