@@ -18,6 +18,7 @@ export class Fluid{
         this.lutTex = null;
         this.lutReady = false;
         this.lutSize = 0.0;
+        this.lutPlaceholderTex = null;
         this.lastFrameMs = 16.6;
         this.adaptivePressureIterations = 0;
         this.idleFrames = 0;
@@ -140,6 +141,29 @@ export class Fluid{
         })
         .catch(err => console.error('Error loading LUT:', err));
 
+        // Ensure a placeholder 3D texture exists for validation when LUT not yet loaded
+        if (!this.lutPlaceholderTex) {
+            const placeholder = gl.createTexture();
+            gl.activeTexture(gl.TEXTURE1);
+            gl.bindTexture(gl.TEXTURE_3D, placeholder);
+            gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+            const data = new Uint8Array([255, 255, 255]);
+            gl.texImage3D(
+                gl.TEXTURE_3D,
+                0,
+                gl.RGB8,
+                1, 1, 1,
+                0,
+                gl.RGB,
+                gl.UNSIGNED_BYTE,
+                data
+            );
+            this.lutPlaceholderTex = placeholder;
+        }
     }
 
     
@@ -372,6 +396,10 @@ export class Fluid{
             gl.uniform1f(this.pbrProgram.uniforms.u_LUTSize, this.lutSize);
             gl.uniform1f(this.pbrProgram.uniforms.u_LUTMix, config.LUT);
         } else {
+            // Bind placeholder and still set u_LUT to distinct unit
+            gl.activeTexture(gl.TEXTURE1);
+            if (this.lutPlaceholderTex) gl.bindTexture(gl.TEXTURE_3D, this.lutPlaceholderTex);
+            gl.uniform1i(this.pbrProgram.uniforms.u_LUT, 1);
             gl.uniform1f(this.pbrProgram.uniforms.u_LUTSize, 0.0);
             gl.uniform1f(this.pbrProgram.uniforms.u_LUTMix, 0.0);
         }
