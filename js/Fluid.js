@@ -24,16 +24,8 @@ export class Fluid{
     
 
     //create all our shader programs 
-    blurProgram               = new LGL.Program(GLSL.blurVertexShader, GLSL.blurShader);
-    copyProgram               = new LGL.Program(GLSL.baseVertexShader, GLSL.copyShader);
     clearProgram              = new LGL.Program(GLSL.baseVertexShader, GLSL.clearShader);
     colorProgram              = new LGL.Program(GLSL.baseVertexShader, GLSL.colorShader);
-    checkerboardProgram       = new LGL.Program(GLSL.baseVertexShader, GLSL.checkerboardShader);
-    bloomPrefilterProgram     = new LGL.Program(GLSL.baseVertexShader, GLSL.bloomPrefilterShader);
-    bloomBlurProgram          = new LGL.Program(GLSL.baseVertexShader, GLSL.bloomBlurShader);
-    bloomFinalProgram         = new LGL.Program(GLSL.baseVertexShader, GLSL.bloomFinalShader);
-    sunraysMaskProgram        = new LGL.Program(GLSL.baseVertexShader, GLSL.sunraysMaskShader);
-    sunraysProgram            = new LGL.Program(GLSL.baseVertexShader, GLSL.sunraysShader);
     splatProgram              = new LGL.Program(GLSL.baseVertexShader, GLSL.splatShader);
     splatColorClickProgram    = new LGL.Program(GLSL.baseVertexShader, GLSL.splatColorClickShader);
     splatVelProgram           = new LGL.Program(GLSL.baseVertexShader, GLSL.splatVelShader); //added to support color / vel map
@@ -55,16 +47,11 @@ export class Fluid{
     divergence;
     curl;
     pressure;
-    bloom;
-    bloomFramebuffers = [];
-    sunrays;
-    sunraysTemp;
     noise;
     wind;
 
     picture = LGL.createTextureAsync('img/colored_noise_bg.jpg');
     ditheringTexture = LGL.createTextureAsync('img/LDR_LLL1_0.png');
-
 
     initFramebuffers () {
         let simRes = LGL.getResolution(config.SIM_RESOLUTION,  config.FORCE_ASPECT);//getResolution basically just applies view aspect ratio to the passed resolution 
@@ -185,7 +172,7 @@ export class Fluid{
         this.applyInputs(); //take from ui
         if (!config.PAUSED)
             this.step(dt); //do a calculation step 
-        this.render(null);
+        this.drawDisplay(null);
         requestAnimationFrame(() => this.update(this));
     }
     
@@ -214,7 +201,6 @@ export class Fluid{
         if (this.splatStack.length > 0) //if there are splats then recreate them
         this.multipleSplats(this.splatStack.pop());//TODO - verify what elemetns of splatStack are and what splatStack.pop() will return (should be int??)
         
-        
         this.pointers.forEach(p => { //create a splat for our pointers 
             if (p.moved) {
                 p.moved = false;
@@ -222,7 +208,6 @@ export class Fluid{
             }
         });
     }
-
 
     step (dt) {
         gl.disable(gl.BLEND);
@@ -351,36 +336,6 @@ export class Fluid{
             gl.uniform1f(this.advectionProgram.uniforms.dissipation, config.DENSITY_DISSIPATION);
             LGL.blit(this.dye.write);
         this.dye.swap();
-    }
-
-    render (target) {
-        if (config.BLOOM)
-            applyBloom(this.dye.read, bloom);
-            if (config.SUNRAYS) {
-                this.applySunrays(this.dye.read, this.dye.write, this.sunrays);
-                this.blur(this.sunrays, this.sunraysTemp, 1);
-            }
-            
-            if (target == null || !config.TRANSPARENT) {
-                gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-                gl.enable(gl.BLEND);
-            }
-            else {
-                gl.disable(gl.BLEND);
-            }
-            
-            if (!config.TRANSPARENT)
-            drawColor(target, LGL.normalizeColor(config.BACK_COLOR), this.colorProgram);
-            if (target == null && config.TRANSPARENT)
-            drawCheckerboard(target, this.checkerboardProgram);
-        if(config.DISPLAY_FLUID){
-            this.drawDisplay(target);
-        }
-        else{
-            this.drawDisplay(this.noise);
-        }
-        // LGL.blit(picture);
-        
     }
     
     drawDisplay (target) {
@@ -581,7 +536,7 @@ export class Fluid{
         }
 
     }
-}
+} //end class
 
 export function pointerPrototype () {
     this.id = -1;
@@ -595,18 +550,6 @@ export function pointerPrototype () {
     this.moved = false;
     this.color = [30, 0, 300];
 }
-    
-function drawColor (target, color, colorProgram) {
-    colorProgram.bind();
-    gl.uniform4f(colorProgram.uniforms.color, color.r, color.g, color.b, 1);
-    LGL.blit(target);
-}
-
-function drawCheckerboard (target, checkerboardProgram) {
-    checkerboardProgram.bind();
-    gl.uniform1f(checkerboardProgram.uniforms.aspectRatio, canvas.width / canvas.height);
-    LGL.blit(target);
-}
 
 function correctDeltaX (delta, canvas) {
     let aspectRatio = canvas.width / canvas.height;
@@ -619,7 +562,6 @@ function correctDeltaY (delta, canvas) {
     if (aspectRatio > 1) delta /= aspectRatio;
     return delta;
 }
-
 
 function updatePointerDownData (pointer, id, posX, posY, canvas) {
     pointer.id = id;

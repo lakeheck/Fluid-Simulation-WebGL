@@ -2,7 +2,6 @@
 export const canvas = document.getElementsByTagName('canvas')[0];
 export const { gl, ext } = getWebGLContext(canvas);
 
-
 export class Material {
     constructor (vertexShader, fragmentShaderSource) {
         this.vertexShader = vertexShader;
@@ -35,7 +34,6 @@ export class Material {
         gl.useProgram(this.activeProgram);
     }
 }
-
 export class Program {
     constructor (vertexShader, fragmentShader) {
         this.uniforms = {};
@@ -47,72 +45,6 @@ export class Program {
         gl.useProgram(this.program);
     }
 }
-
-const baseVertexShader = compileShader(gl.VERTEX_SHADER, `
-    precision highp float;
-
-    attribute vec2 aPosition;
-    varying vec2 vUv;
-    varying vec2 vL;
-    varying vec2 vR;
-    varying vec2 vT;
-    varying vec2 vB;
-    uniform vec2 texelSize;
-
-    void main () {
-        vUv = aPosition * 0.5 + 0.5;
-        vL = vUv - vec2(texelSize.x, 0.0);
-        vR = vUv + vec2(texelSize.x, 0.0);
-        vT = vUv + vec2(0.0, texelSize.y);
-        vB = vUv - vec2(0.0, texelSize.y);
-        gl_Position = vec4(aPosition, 0.0, 1.0);
-    }
-`);
-
-export const colorShader = compileShader(gl.FRAGMENT_SHADER, `
-precision mediump float;
-
-uniform vec4 color;
-
-void main () {
-    gl_FragColor = color;
-}
-`);
-
-export const checkerboardShader = compileShader(gl.FRAGMENT_SHADER, `
-precision highp float;
-precision highp sampler2D;
-
-varying vec2 vUv;
-uniform sampler2D uTexture;
-uniform float aspectRatio;
-
-#define SCALE 25.0
-
-void main () {
-    vec2 uv = floor(vUv * SCALE * vec2(aspectRatio, 1.0));
-    float v = mod(uv.x + uv.y, 2.0);
-    v = v * 0.1 + 0.8;
-    gl_FragColor = vec4(vec3(v), 1.0);
-}
-`);
-
-export const copyShader = compileShader(gl.FRAGMENT_SHADER, `
-precision mediump float;
-precision mediump sampler2D;
-
-varying highp vec2 vUv;
-uniform sampler2D uTexture;
-
-void main () {
-    gl_FragColor = texture2D(uTexture, vUv);
-}
-`);
-
-const colorProgram              = new Program(baseVertexShader, colorShader);
-const checkerboardProgram       = new Program(baseVertexShader, checkerboardShader);
-const copyProgram       = new Program(baseVertexShader, checkerboardShader);
-
 
 export function getSupportedFormat (gl, internalFormat, format, type)
 {
@@ -194,7 +126,6 @@ export const blit = (() => {
     }
 })();
 
-
 //test case to check that the correct pixel types are supported 
 //setup a gl texture
 //set the texture params 
@@ -218,7 +149,6 @@ export function supportRenderTextureFormat (gl, internalFormat, format, type) {
     let status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
     return status == gl.FRAMEBUFFER_COMPLETE;
 }
-
 
 export function getWebGLContext (canvas) {
     const params = { alpha: true, depth: false, stencil: false, antialias: false, preserveDrawingBuffer: false };
@@ -413,7 +343,6 @@ export function resizeFBO (target, w, h, internalFormat, format, type, param) {
     return newFBO;
 }
 
-
 export function resizeDoubleFBO (target, w, h, internalFormat, format, type, param) {
     if (target.width == w && target.height == h)
         {
@@ -467,7 +396,6 @@ export function updateKeywords (config, displayMaterial) {
     if (config.SUNRAYS) displayKeywords.push("SUNRAYS");
     displayMaterial.setKeywords(displayKeywords);
 }
-
 
 export function createFBO (w, h, internalFormat, format, type, param) {
     gl.activeTexture(gl.TEXTURE0);
@@ -565,9 +493,6 @@ export function createDoubleFBO (w, h, internalFormat, format, type, param) {
     }
 }
 
-
-
-
 export function createProgram (vertexShader, fragmentShader) {
     let program = gl.createProgram();
     gl.attachShader(program, vertexShader);
@@ -656,7 +581,6 @@ export function isMobile () {
     const uaMobile = /Mobi|Android|iPhone|iPad|iPod|Windows Phone/i.test(ua);
     return !!(hasCoarsePointer || hasTouch || uaMobile);
 }
-
 
 export function captureScreenshot () {
     let res = getResolution(config.CAPTURE_RESOLUTION);
