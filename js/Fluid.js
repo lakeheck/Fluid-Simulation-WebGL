@@ -2,7 +2,7 @@
 import * as GLSL from "./Shaders.js";
 import * as LGL from "./WebGL.js";
 import {gl , ext, canvas } from "./WebGL.js";
-import {config} from "./config.js";
+import {config, CONFIG_SCHEMA} from "./config.js";
 export class Fluid{
 
     constructor(gl){
@@ -11,15 +11,15 @@ export class Fluid{
         this.splatstack = [];
         this.pointers.push(new pointerPrototype());
         this.displayMaterial = new LGL.Material(GLSL.baseVertexShader, GLSL.displayShaderSource);
-
         this.canvas = canvas;
         this.lastUpdateTime = 0.0;
         this.noiseSeed = 0.0;
         this.colorUpdateTimer = 0.0;
     }
-
+    
     splatStack = [];
-
+    uniforms;
+    
 
     //create all our shader programs 
     blurProgram               = new LGL.Program(GLSL.blurVertexShader, GLSL.blurShader);
@@ -46,7 +46,7 @@ export class Fluid{
     windProgram               = new LGL.Program(GLSL.baseVertexShader, GLSL.windShader);
     pbrProgram                = new LGL.Program(GLSL.noiseVertexShader, GLSL.bdrfShader); //noise generator 
     LUTProgram                = new LGL.Program(GLSL.noiseVertexShader, GLSL.LUTShader);
-    domainWarpProgram         = new LGL.Program(GLSL.baseVertexShader, GLSL.domainWarpShader);
+    domainWarpProgram         = new LGL.Program(GLSL.noiseVertexShader, GLSL.domainWarpShader);
 
     dye;
     velocity;
@@ -62,7 +62,7 @@ export class Fluid{
 
     picture = LGL.createTextureAsync('img/colored_noise_bg.jpg');
     ditheringTexture = LGL.createTextureAsync('img/LDR_LLL1_0.png');
-    
+
 
     initFramebuffers () {
         let simRes = LGL.getResolution(config.SIM_RESOLUTION);//getResolution basically just applies view aspect ratio to the passed resolution 
@@ -144,6 +144,7 @@ export class Fluid{
             console.log('LUT loaded (WebGL2 3D):', size);
         })
         .catch(err => console.error('Error loading LUT:', err));
+
     }
 
     updateKeywords () {
@@ -223,7 +224,8 @@ export class Fluid{
 
         this.domainWarpProgram.bind();
         gl.uniform1f(this.domainWarpProgram.uniforms.u_time, Date.now()); 
-        gl.uniform1f(this.domainWarpProgram.uniforms.u_seed, 0,0,0); 
+        gl.uniform3f(this.domainWarpProgram.uniforms.u_seed, 0,0,0); 
+        LGL.blit(this.picture);
         
         
         this.noiseProgram.bind();
@@ -313,7 +315,7 @@ export class Fluid{
         if(config.DENSITY_MAP_ENABLE){
 
             this.splatColorProgram.bind();
-            gl.uniform1f(this.splatColorProgram.uniforms.uFlow, config.FLOW / 1000);
+            gl.uniform1f(this.splatColorProgram.uniforms.uFlow, config.FLOW / 1000.0);
             gl.uniform1f(this.splatColorProgram.uniforms.aspectRatio, canvas.width / canvas.height);
             gl.uniform2f(this.splatColorProgram.uniforms.point, 0, 0);
             gl.uniform1i(this.splatColorProgram.uniforms.uTarget, this.dye.read.attach(0));
@@ -520,19 +522,37 @@ export class Fluid{
         //dat is a library developed by Googles Data Team for building JS interfaces. Needs to be included in project directory 
         var gui = new dat.GUI({ width: 300 });
         
-        let fluidFolder = gui.addFolder('Fluid Settings');
-        fluidFolder.add(config, 'DENSITY_DISSIPATION', 0, 1.0).name('Density Diffusion');
-        fluidFolder.add(config, 'FLOW', 0, 10).name('Flow');
-        fluidFolder.add(config, 'SPLAT_FLOW', 0, 1).name('Splat Flow');
-        fluidFolder.add(config, 'VELOCITY_DISSIPATION', 0, 1.0).name('Velocity Diffusion');
-        fluidFolder.add(config, 'CURL', 0, 100).name('Curl').step(2);
-        fluidFolder.add(config, 'VELOCITYSCALE', 0, 1.0).name('Velocity Scale');
-        fluidFolder.add(config, 'PRESSURE', 0.0, 1.0).name('Pressure');
-        fluidFolder.add(config, 'CURL', 0, 500).name('Vorticity').step(1);
-        fluidFolder.add(config, 'SPLAT_RADIUS', 0.01, 1.0).name('Splat Radius');
-        fluidFolder.add(config, 'WIND_SCALE', 0, 1).name('Wind Power');
-        fluidFolder.add(config, 'LUT', 0, 1).name('LUT');
-        fluidFolder.add(config, 'BDRF_NORMALS', 0, .5).name('Normals');
+		// Helper to add controls from schema
+		const addFromSchema = (folder, key) => {
+			const meta = CONFIG_SCHEMA[key];
+			let ctrl;
+			if (!meta) return folder.add(config, key);
+			if (meta.type === 'bool') {
+				ctrl = folder.add(config, key);
+			} else if (meta.type === 'color') {
+				ctrl = folder.addColor(config, key);
+			} else {
+				if (meta.min !== undefined && meta.max !== undefined) ctrl = folder.add(config, key, meta.min, meta.max);
+				else ctrl = folder.add(config, key);
+				if (typeof meta.step === 'number') ctrl.step(meta.step);
+			}
+			if (meta.label) ctrl.name(meta.label);
+			return ctrl;
+		};
+
+		let fluidFolder = gui.addFolder('Fluid Settings');
+		addFromSchema(fluidFolder, 'DENSITY_DISSIPATION');
+		addFromSchema(fluidFolder, 'FLOW');
+		addFromSchema(fluidFolder, 'SPLAT_FLOW');
+		addFromSchema(fluidFolder, 'VELOCITY_DISSIPATION');
+		addFromSchema(fluidFolder, 'CURL');
+		addFromSchema(fluidFolder, 'VELOCITYSCALE');
+		addFromSchema(fluidFolder, 'PRESSURE');
+		addFromSchema(fluidFolder, 'CURL');
+		addFromSchema(fluidFolder, 'SPLAT_RADIUS');
+		addFromSchema(fluidFolder, 'WIND_SCALE');
+		addFromSchema(fluidFolder, 'LUT');
+		addFromSchema(fluidFolder, 'BDRF_NORMALS');
         
         
         fluidFolder.add({ fun: () => {
@@ -540,24 +560,27 @@ export class Fluid{
         } }, 'fun').name('Random splats');
         
         
-        let mapFolder = gui.addFolder('Enable / Disable Maps');
-        mapFolder.add(config, 'FORCE_MAP_ENABLE').name('force map enable');
-        mapFolder.add(config, 'DENSITY_MAP_ENABLE').name('density map enable'); //adding listen() will update the ui if the parameter value changes elsewhere in the program 
-        mapFolder.add(config, 'DISPLAY_FLUID').name('Toggle Show Vel Map');
+		let mapFolder = gui.addFolder('Enable / Disable Maps');
+		addFromSchema(mapFolder, 'FORCE_MAP_ENABLE');
+		addFromSchema(mapFolder, 'DENSITY_MAP_ENABLE');
+		addFromSchema(mapFolder, 'DISPLAY_FLUID');
         
-        let noiseFolder = gui.addFolder('Velocity Map');
-        noiseFolder.add(config, 'PERIOD', 0, 10.0).name('Period');
-        noiseFolder.add(config, 'EXPONENT', 0, 4.0).name('Exponent');
-        noiseFolder.add(config, 'RIDGE', 0, 1.5).name('Ridge');
-        noiseFolder.add(config, 'AMP', 0, 4.0).name('Amplitude');
-        noiseFolder.add(config, 'LACUNARITY', 0, 4).name('Lacunarity');
-        noiseFolder.add(config, 'NOISE_TRANSLATE_SPEED', 0, .5).name('Noise Translate Speed');
-        noiseFolder.add(config, 'GAIN', 0.0, 1.0).name('Gain');
-        noiseFolder.add(config, 'OCTAVES', 0, 8).name('Octaves').step(1);
+		let noiseFolder = gui.addFolder('Velocity Map');
+		addFromSchema(noiseFolder, 'PERIOD');
+		addFromSchema(noiseFolder, 'EXPONENT');
+		addFromSchema(noiseFolder, 'RIDGE');
+		addFromSchema(noiseFolder, 'AMP');
+		addFromSchema(noiseFolder, 'LACUNARITY');
+		addFromSchema(noiseFolder, 'NOISE_TRANSLATE_SPEED');
+		addFromSchema(noiseFolder, 'GAIN');
+		addFromSchema(noiseFolder, 'OCTAVES');
         
-        gui.add(config, 'PAUSED').name('Paused').listen();
-        gui.add(config, 'RESET').name('Reset').onFinishChange(reset);
-        gui.add(config, 'RANDOM').name('Randomize').onFinishChange(randomizeParams);
+		const pausedCtrl = addFromSchema(gui, 'PAUSED');
+		if (pausedCtrl && pausedCtrl.listen) pausedCtrl.listen();
+		const resetCtrl = addFromSchema(gui, 'RESET');
+		if (resetCtrl) resetCtrl.onFinishChange(reset);
+		const randomCtrl = addFromSchema(gui, 'RANDOM');
+		if (randomCtrl) randomCtrl.onFinishChange(randomizeParams);
 
         //not using these 
         // let bloomFolder = gui.addFolder('Bloom');
@@ -683,4 +706,5 @@ function parseCubeLUT(cubeText) {
     }
     return { size, data: new Float32Array(data) };
   }
-  
+
+   

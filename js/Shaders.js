@@ -1161,9 +1161,8 @@ void main () {
 }
 `);
 
-export const domainWarpShader = compileShader(gl.FRAGMENT_SHADER, `
+export const domainWarpShader = compileShader(gl.FRAGMENT_SHADER, `#version 300 es
 precision highp float;
-precision highp sampler3D;
 
 uniform float u_time;
 uniform vec3 u_seed;
@@ -1201,7 +1200,8 @@ const float u_WarpfactorxArray[5]=float[5](1.3458, 1.0514, 0.2602, 1.8470, 0.844
 const float u_WarpfactoryArray[5]=float[5](1.8641, 0.9716, 0.9240, 0.7654, 1.4699);
 const float u_PeriodArray[5]    = float[5](0.2739, 3.8296, 2.1803, 2.5493, 1.1063);
 
-varying vec2 vUv;
+in vec2 vUv;
+out vec4 fragColor;
 
 #define TWOPI 6.28318530718
 #define MAX_ITER 4
@@ -1215,20 +1215,6 @@ varying vec2 vUv;
 float luminance(vec3 color){
   return dot(color, vec3(0.2125, 0.7154, 0.0721));
 }
-
-// A helper function to apply the 3D LUT.
-// It assumes color values are in the [0,1] range.
-vec3 applyLUT(vec3 color, sampler3D lut, float size) {
-    if(size > 0.0) {
-        color = clamp(color, 0.0, 1.0);
-        float scale = (size - 1.0) / size;
-        float offset = 0.5 / size;
-        vec3 lutCoord = color * scale + offset;
-        return texture(lut, lutCoord).rgb;
-    }
-    return color;
-}
-
 
 //////// COLOR PALETTES ////////
 vec4 palette1[5] = vec4[5](
@@ -1654,6 +1640,6 @@ void main() {
 
     color.rgb = mix(color.rgb, vec3(luminance(color.rgb)), u_monochrome);
 
-    gl_FragColor = vec4(color);
+    fragColor = vec4(color);
 }
 `)

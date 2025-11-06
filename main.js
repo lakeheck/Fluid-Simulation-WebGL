@@ -2,7 +2,7 @@
 'use strict';
 
 import {gl , ext, canvas } from "./js/WebGL.js";
-import {config} from "./js/config.js";
+import {config, CONFIG_SCHEMA} from "./js/config.js";
 import {Fluid, pointerPrototype} from "./js/Fluid.js";
 import * as LGL from "./js/WebGL.js";
 
@@ -123,3 +123,102 @@ function updatePointerMoveData (pointer, posX, posY) {
 function updatePointerUpData (pointer) {
     pointer.down = false;
 }
+
+
+// =============================================================================
+// Layer SDK Integration: Control Simulation Shader Parameters
+// =============================================================================
+
+
+// =============================================================================
+// App Class: Holds simulation parameters (to be passed to the simulation shader)
+// =============================================================================
+class App {
+  constructor() {
+    // Simulation parameters for our sim shader.
+    this.playing = true;
+    this.windScale = config.WIND_SCALE;
+  }
+  setPlaying(value) {
+    this.playing = value;
+  }
+  getPlaying() {
+    return this.playing;
+  }
+  setWindScale(value) {
+    config.WIND_SCALE = value;
+  }
+  getWindScale() {
+    return this.windScale;
+  }
+}
+const app = new App();
+globalThis.addEventListener("layer:dimensionschange", (event) => {
+  canvas.width = event.detail.width;
+  canvas.height = event.detail.height;
+});
+globalThis.addEventListener("layer:play", () => { app.playing = true; });
+globalThis.addEventListener("layer:pause", () => { app.playing = false; });
+globalThis.addEventListener("layer:paramchange", (event) => {
+  const toCamel = (s) => s.toLowerCase().replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+  const idToKey = Object.entries(CONFIG_SCHEMA)
+    .filter(([, meta]) => meta && meta.layerParam)
+    .reduce((m, [key, meta]) => { m[(meta.id || toCamel(key))] = key; return m; }, {});
+  const id = event.detail.id;
+  if (idToKey[id]) {
+    const key = idToKey[id];
+    const value = event.detail.value;
+    config[key] = value;
+    if (key === 'WIND_SCALE') app.setWindScale(value);
+    if (key === 'PAUSED') app.setPlaying(!value);
+  }
+});
+
+
+
+
+
+// Request parameters from the parent platform.
+(async () => {
+  const toCamel = (s) => s.toLowerCase().replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+
+  const entries = Object.entries(CONFIG_SCHEMA).filter(([, meta]) => meta && meta.layerParam);
+  const idToKey = {};
+  const params = {};
+
+  for (const [key, meta] of entries) {
+    const id = meta.id || toCamel(key);
+    idToKey[id] = key;
+    const kind = (meta.type === 'bool') ? 'BOOLEAN' : 'NUMBER';
+    params[id] = {
+      id,
+      name: meta.label || id,
+      description: meta.label || id,
+      customization_level: 'CURATOR',
+      kind,
+      min: kind === 'NUMBER' ? meta.min : undefined,
+      max: kind === 'NUMBER' ? meta.max : undefined,
+      step: kind === 'NUMBER' ? (meta.step ?? 0.001) : undefined,
+      default: meta.default,
+    };
+  }
+
+  const values = await $layer.params(...Object.values(params));
+
+  for (const [id, value] of Object.entries(values)) {
+    const key = idToKey[id];
+    if (!key) continue;
+    config[key] = value;
+    if (key === 'WIND_SCALE') app.setWindScale(value);
+    if (key === 'PAUSED') app.setPlaying(!value);
+  }
+
+  app.playing = !$layer.controlled;
+  $layer.previewEnabled = true;
+})();
+
+addEventListener('message', (event) => {
+	if (typeof event.data !== 'string') return;
+	if (!event.data.startsWith('layer:')) return;
+	console.log(event.data);
+});
