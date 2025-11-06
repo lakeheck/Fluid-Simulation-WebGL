@@ -318,7 +318,6 @@ return sin(st.y*st.x);
 
 float dis(vec3 st){
 float d = grid(vUv, 7.0, 0.45, PI/4.);
-// d = texture(sTD2DInputs[0],vUv).r;
 FBM(monoSimplex, -743.4838)
 return d *t;
 }
@@ -359,7 +358,7 @@ void main()
 vec3 st = vec3(vUv, 0.0);
 NOISE_RGB(monoSimplex, 2.4);
 // FBM(recursiveWarpNoise, 2.4);
-vec4 color = fbm(st, uSeed); 
+vec4 color = fbm(st, uSeed) - vec4(0.5); 
 //output
 fragColor = (color);
 
@@ -678,11 +677,13 @@ void main () {
     vec2 p = vUv - point.xy;
     p.x *= aspectRatio;
     vec3 splat = vec3(0.0);
-    splat = smoothstep(0.0, 1.0, texture2D(uDensityMap, vUv).xyz) * (normalize(texture2D(uForceMap, vUv).rgb)*2.0-1.0) * uVelocityScale;
-    splat.z = 0.0;
+    splat = smoothstep(0.0, 1.0, texture2D(uDensityMap, vUv).xyz);
+    vec3 force = texture2D(uForceMap, vUv).rgb * uVelocityScale;
+    vec3 wind = texture2D(uWindMap, vUv.st).rgb;
+    force += wind;
+    force.z = 0.0;
     vec3 base = texture2D(uTarget, vUv).xyz;
-    splat.rg += texture2D(uWindMap, vUv).xy;
-    gl_FragColor = vec4(base + splat, 1.0);
+    gl_FragColor = vec4(base + wind, 1.0);
 }
 `);
 
@@ -951,5 +952,177 @@ void main()
     w = wind(vUv, 0.5, uSmoothness, int(uWindPattern1));
     vec4 color = vec4(w * uGlobalWindScale, 0.0, 1.0);
     gl_FragColor = color;
+}
+`);
+
+export const bdrfShader = compileShader(gl.FRAGMENT_SHADER, `#version 300 es
+// Copyright Lake Heckaman, 2025. All rights reserved. 
+// www.lakeheckaman.com
+// I am the sole copyright owner of this Work.
+// You cannot host, display, distribute or share this Work neither
+// as it is or altered, here on Shadertoy or anywhere else, in any
+// form including physical and digital. You cannot use this Work in any
+// commercial or non-commercial product, website or project. You cannot
+// sell this Work and you cannot mint an NFTs of it or use it to train a neural
+// network or any other type of model, generative or not, without permission.
+
+#ifdef GL_ES
+precision mediump sampler2D; 
+precision mediump float;
+#endif
+
+out vec4 fragColor;
+
+//adapted from https://github.com/dli/paint/blob/master/shaders/painting.frag
+
+in vec2 vUv;
+uniform sampler2D sTexture;
+
+uniform vec2 uRes;
+uniform float uNormalScale;
+uniform vec3 uLightDir;
+uniform float uRough;
+uniform float uF0;
+uniform float uDiffuse;
+uniform float uSpec;
+uniform float uWetDry;
+#define RGB
+
+float luminance(vec3 v){
+    return dot(v, vec3(0.2126, 0.7152, 0.0722));
+}
+
+vec3 trilinearInterpolate(vec3 p, vec3 v000, vec3 v100, vec3 v010, vec3 v001, vec3 v101, vec3 v011, vec3 v110, vec3 v111) {
+    return v000 * (1.0 - p.x) * (1.0 - p.y) * (1.0 - p.z) +
+           v100 * p.x * (1.0 - p.y) * (1.0 - p.z) +
+           v010 * (1.0 - p.x) * p.y * (1.0 - p.z) +
+           v001 * (1.0 - p.x) * (1.0 - p.y) * p.z +
+           v101 * p.x * (1.0 - p.y) * p.z +
+           v011 * (1.0 - p.x) * p.y * p.z +
+           v110 * p.x * p.y * (1.0 - p.z) +
+           v111 * p.x * p.y * p.z;
+}
+
+vec3 rybToRgb(vec3 ryb) {
+#ifdef RGB
+    return 1.0 - ryb.yxz;
+#endif
+
+    return trilinearInterpolate(ryb, 
+        vec3(1.0, 1.0, 1.0), 
+        vec3(1.0, 0.0, 0.0), 
+        vec3(0.163, 0.373, 0.6), 
+        vec3(1.0, 1.0, 0.0), 
+        vec3(1.0, 0.5, 0.0), 
+        vec3(0.0, 0.66, 0.2),
+        vec3(0.5, 0.0, 0.5),
+        vec3(0.2, 0.094, 0.0));
+}
+
+//samples with feathering at the edges
+vec4 samplePaintTexture (vec2 coordinates) {
+    return texture(sTexture, coordinates);
+}
+
+float getHeight (vec2 coordinates) {
+    return luminance(samplePaintTexture(coordinates).rgb);
+}
+
+
+vec2 computeGradient(vec2 coordinates) { //sobel operator
+    vec2 delta = 1.0 / uRes;
+
+    float topLeft = getHeight(coordinates + vec2(-delta.x, delta.y));
+    float top = getHeight(coordinates + vec2(0.0, delta.y));
+    float topRight = getHeight(coordinates + vec2(delta.x, delta.y));
+
+    float left = getHeight(coordinates + vec2(-delta.x, 0.0));
+    float right = getHeight(coordinates + vec2(delta.x, 0.0));
+
+    float bottomLeft = getHeight(coordinates + vec2(-delta.x, -delta.y));
+    float bottom = getHeight(coordinates + vec2(0.0, -delta.y));
+    float bottomRight = getHeight(coordinates + vec2(delta.x, -delta.y));
+    
+    return vec2(
+         1.0 * topLeft - 1.0 * topRight + 2.0 * left - 2.0 * right + 1.0 * bottomLeft - 1.0 * bottomRight,
+        -1.0 * topLeft + 1.0 * bottomLeft - 2.0 * top + 2.0 * bottom - 1.0 * topRight + 1.0 * bottomRight);
+}
+
+
+const float PI = 3.14159265;
+
+float square (float x) {
+    return x * x;
+}
+
+float fresnel (float F0, float lDotH) {
+    float f = pow(1.0 - lDotH, 5.0);
+
+    return (1.0 - F0) * f + F0;
+}
+
+float GGX (float alpha, float nDotH) {
+    float a2 = square(alpha);
+
+    return a2 / (PI * square(square(nDotH) * (a2 - 1.0) + 1.0));
+}
+
+float GGGX (float alpha, float nDotL, float nDotV) {
+    float a2 = square(alpha);
+
+    float gl = nDotL + sqrt(a2 + (1.0 - a2) * square(nDotL));
+    float gv = nDotV + sqrt(a2 + (1.0 - a2) * square(nDotV));
+
+    return 1.0 / (gl * gv);
+}
+
+float saturate (float x) {
+    return clamp(x, 0.0, 1.0);
+}
+
+float specularBRDF (vec3 lightDirection, vec3 eyeDirection, vec3 normal, float roughness, float F0) {
+    vec3 halfVector = normalize(lightDirection + eyeDirection);
+
+    float nDotH = saturate(dot(normal, halfVector));
+    float nDotL = saturate(dot(normal, lightDirection));
+    float nDotV = saturate(dot(normal, eyeDirection));
+    float lDotH = saturate(dot(lightDirection, halfVector));
+
+    float D = GGX(roughness, nDotH);
+    float G = GGGX(roughness, nDotL, nDotV);
+    float F = fresnel(F0, lDotH);
+
+    return D * G * F;
+}
+
+void main () {
+
+    vec2 coordinates = vUv;
+
+    vec4 value = samplePaintTexture(coordinates); //r, g, b, height
+
+    vec2 gradient = computeGradient(coordinates);
+    vec3 normal = normalize(vec3(
+        gradient.x,
+        gradient.y,
+        uNormalScale
+    ));
+
+    vec3 lightDirection = normalize(uLightDir);
+    vec3 eyeDirection = vec3(1.50, -1.0, 1.0);
+
+    float diffuse = saturate(dot(lightDirection, normal));
+    diffuse = diffuse * uDiffuse + (1.0 - uDiffuse);
+
+
+    float specular = specularBRDF(lightDirection, eyeDirection, normal, length(value.rgb)*uRough, uF0);
+
+    vec3 color = (value.rgb);
+
+    vec3 surfaceColor = color * diffuse + specular * uSpec;
+    
+    surfaceColor = mix(color, surfaceColor, uWetDry);
+
+	fragColor = vec4(surfaceColor, 1.0);
 }
 `);
