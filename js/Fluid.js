@@ -46,6 +46,7 @@ export class Fluid{
     windProgram               = new LGL.Program(GLSL.baseVertexShader, GLSL.windShader);
     pbrProgram                = new LGL.Program(GLSL.noiseVertexShader, GLSL.bdrfShader); //noise generator 
     LUTProgram                = new LGL.Program(GLSL.noiseVertexShader, GLSL.LUTShader);
+    domainWarpProgram         = new LGL.Program(GLSL.baseVertexShader, GLSL.domainWarpShader);
 
     dye;
     velocity;
@@ -66,7 +67,7 @@ export class Fluid{
     initFramebuffers () {
         let simRes = LGL.getResolution(config.SIM_RESOLUTION);//getResolution basically just applies view aspect ratio to the passed resolution 
         let dyeRes = LGL.getResolution(config.DYE_RESOLUTION);//getResolution basically just applies view aspect ratio to the passed resolution 
-    
+        let palRes = LGL.getResolution(config.PALETTE_RESOLUTION);
         const texType = ext.halfFloatTexType; 
         const rgba    = ext.formatRGBA;
         const rg      = ext.formatRG;
@@ -96,8 +97,9 @@ export class Fluid{
         this.divergence = LGL.createFBO      (simRes.width, simRes.height, r.internalFormat, r.format, texType, gl.NEAREST);
         this.curl       = LGL.createFBO      (simRes.width, simRes.height, r.internalFormat, r.format, texType, gl.NEAREST);
         this.pressure   = LGL.createDoubleFBO(simRes.width, simRes.height, r.internalFormat, r.format, texType, gl.NEAREST);
-        this.wind       = LGL.createFBO      (simRes.width, simRes.height, rgba.internalFormat, rgba.format, texType, gl.NEAREST);
-        this.post       = LGL.createFBO      (dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, gl.NEAREST);
+        this.wind       = LGL.createFBO      (simRes.width, simRes.height, rgba.internalFormat, rgba.format, texType, gl.LINEAR);
+        this.post       = LGL.createFBO      (dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, gl.LINEAR);
+        this.palette    = LGL.createFBO      (palRes.width, palRes.height, rgba.internalFormat, rgba.format, texType, gl.LINEAR);
 
         fetch('lut/maelstrom_gold.cube')
         .then(r => r.text())
@@ -138,7 +140,6 @@ export class Fluid{
             this.LUTProgram.bind();
             gl.uniform1i(this.LUTProgram.uniforms.u_LUT, 1);
             gl.uniform1f(this.LUTProgram.uniforms.u_LUTSize, size);
-            gl.uniform1f(this.LUTProgram.uniforms.u_LUTMix, 1.0);
                       
             console.log('LUT loaded (WebGL2 3D):', size);
         })
@@ -219,6 +220,12 @@ export class Fluid{
 
     step (dt) {
         gl.disable(gl.BLEND);
+
+        this.domainWarpProgram.bind();
+        gl.uniform1f(this.domainWarpProgram.uniforms.u_time, Date.now()); 
+        gl.uniform1f(this.domainWarpProgram.uniforms.u_seed, 0,0,0); 
+        
+        
         this.noiseProgram.bind();
         gl.uniform1f(this.noiseProgram.uniforms.uPeriod, config.PERIOD); 
         gl.uniform3f(this.noiseProgram.uniforms.uTranslate, 0.0, 0.0, 0.0);
@@ -235,7 +242,9 @@ export class Fluid{
         this.noise.swap();
 
         this.windProgram.bind();
-        gl.uniform1f(this.windProgram.uniforms.uGlobalWindScale, 1.5);
+        //TODO - update wind with animations and also animatte the global wind scale 
+        //TODO - maybe have one version where its tied to a weather API????
+        gl.uniform1f(this.windProgram.uniforms.uGlobalWindScale, config.WIND_SCALE);
         gl.uniform2f(this.windProgram.uniforms.uCenter, .5, .5); 
         gl.uniform1f(this.windProgram.uniforms.uSmoothness, 0.1); 
         gl.uniform1f(this.windProgram.uniforms.uWindMix, 0); 
@@ -291,7 +300,6 @@ export class Fluid{
             gl.uniform1i(this.splatVelProgram.uniforms.uDensityMap, this.picture.attach(1)); //density map
             gl.uniform1i(this.splatVelProgram.uniforms.uForceMap, this.noise.read.attach(2)); //add noise for velocity map 
             gl.uniform1i(this.splatVelProgram.uniforms.uWindMap, this.wind.attach(3)); //add noise for velocity map 
-            
             gl.uniform1f(this.splatVelProgram.uniforms.aspectRatio, canvas.width / canvas.height);
             gl.uniform1f(this.splatVelProgram.uniforms.uVelocityScale, config.VELOCITYSCALE);
             gl.uniform2f(this.splatVelProgram.uniforms.point, 0, 0);
@@ -303,6 +311,7 @@ export class Fluid{
         }
     
         if(config.DENSITY_MAP_ENABLE){
+
             this.splatColorProgram.bind();
             gl.uniform1f(this.splatColorProgram.uniforms.uFlow, config.FLOW / 1000);
             gl.uniform1f(this.splatColorProgram.uniforms.aspectRatio, canvas.width / canvas.height);
@@ -385,6 +394,8 @@ export class Fluid{
 
         this.LUTProgram.bind();
         gl.uniform1i(this.LUTProgram.uniforms.sTexture, this.post.attach(0));
+        gl.uniform1f(this.LUTProgram.uniforms.u_LUTMix, config.LUT);
+
         LGL.blit(target);
     }
 
@@ -508,19 +519,22 @@ export class Fluid{
         const parName = 'Output Resolution';
         //dat is a library developed by Googles Data Team for building JS interfaces. Needs to be included in project directory 
         var gui = new dat.GUI({ width: 300 });
-    
-        gui.add(config, 'DYE_RESOLUTION', { 'high': 1024, 'medium': 512, 'low': 256, 'very low': 128 }).name(parName);
-        gui.add(config, 'SIM_RESOLUTION', { '32': 32, '64': 64, '128': 128, '256': 256 }).name('Fluid Sim Resolution');
         
         let fluidFolder = gui.addFolder('Fluid Settings');
-        fluidFolder.add(config, 'DENSITY_DISSIPATION', 0, 4.0).name('Density Diffusion');
+        fluidFolder.add(config, 'DENSITY_DISSIPATION', 0, 1.0).name('Density Diffusion');
         fluidFolder.add(config, 'FLOW', 0, 10).name('Flow');
         fluidFolder.add(config, 'SPLAT_FLOW', 0, 1).name('Splat Flow');
-        fluidFolder.add(config, 'VELOCITY_DISSIPATION', 0, 4.0).name('Velocity Diffusion');
-        fluidFolder.add(config, 'VELOCITYSCALE', 0, 10.0).name('Velocity Scale');
+        fluidFolder.add(config, 'VELOCITY_DISSIPATION', 0, 1.0).name('Velocity Diffusion');
+        fluidFolder.add(config, 'CURL', 0, 100).name('Curl').step(2);
+        fluidFolder.add(config, 'VELOCITYSCALE', 0, 1.0).name('Velocity Scale');
         fluidFolder.add(config, 'PRESSURE', 0.0, 1.0).name('Pressure');
-        fluidFolder.add(config, 'CURL', 0, 50).name('Vorticity').step(1);
+        fluidFolder.add(config, 'CURL', 0, 500).name('Vorticity').step(1);
         fluidFolder.add(config, 'SPLAT_RADIUS', 0.01, 1.0).name('Splat Radius');
+        fluidFolder.add(config, 'WIND_SCALE', 0, 1).name('Wind Power');
+        fluidFolder.add(config, 'LUT', 0, 1).name('LUT');
+        fluidFolder.add(config, 'BDRF_NORMALS', 0, .5).name('Normals');
+        
+        
         fluidFolder.add({ fun: () => {
             splatStack.push(parseInt(Math.random() * 20) + 5);
         } }, 'fun').name('Random splats');

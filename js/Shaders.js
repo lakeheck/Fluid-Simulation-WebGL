@@ -1160,3 +1160,500 @@ void main () {
 	fragColor = vec4(surfaceColor, 1.0);
 }
 `);
+
+export const domainWarpShader = compileShader(gl.FRAGMENT_SHADER, `
+precision highp float;
+precision highp sampler3D;
+
+uniform float u_time;
+uniform vec3 u_seed;
+uniform float u_scale;
+uniform float u_speed;
+uniform vec2 u_resolution;
+uniform float u_gain;
+uniform float u_lacunarity;
+uniform float u_exponent;
+uniform float u_amplitude;
+uniform float u_bands;
+uniform float u_terrainH;
+uniform float u_monochrome;
+uniform float u_ColorMode;
+uniform float u_PaletteA;
+uniform float u_PaletteB;
+uniform float u_PaletteMix;
+uniform float u_warp_uniform_x;
+uniform float u_warp_uniform_y;
+uniform float u_warp_uniform_z;
+uniform sampler2D s_palette;
+
+uniform float u_BaseAngX;
+uniform float u_BaseAngY;
+uniform float u_BaseDispX;
+uniform float u_BaseDispY;
+
+
+// Per-layer controls
+const float u_MixogArray[5]     = float[5](0.883862, 0.237133, 0.6149, 0.544857, 0.299989);
+const float u_IterationsArray[5]= float[5](6.0, 2.0, 4.0, 3.0, 3.0);
+const float u_NoisetypeArray[5] = float[5](2.0, 1.0, 2.0, 2.0, 1.0);
+const float u_FalloffArray[5]   = float[5](0.3033, 0.1285, 0.3822, 0.6711, 0.3802);
+const float u_WarpfactorxArray[5]=float[5](1.3458, 1.0514, 0.2602, 1.8470, 0.8444);
+const float u_WarpfactoryArray[5]=float[5](1.8641, 0.9716, 0.9240, 0.7654, 1.4699);
+const float u_PeriodArray[5]    = float[5](0.2739, 3.8296, 2.1803, 2.5493, 1.1063);
+
+varying vec2 vUv;
+
+#define TWOPI 6.28318530718
+#define MAX_ITER 4
+//noise types
+#define FBM 1 
+#define FBMLYGIA 2
+#define VORONOISE 3
+#define TERRAIN 4
+#define TOBE 0
+
+float luminance(vec3 color){
+  return dot(color, vec3(0.2125, 0.7154, 0.0721));
+}
+
+// A helper function to apply the 3D LUT.
+// It assumes color values are in the [0,1] range.
+vec3 applyLUT(vec3 color, sampler3D lut, float size) {
+    if(size > 0.0) {
+        color = clamp(color, 0.0, 1.0);
+        float scale = (size - 1.0) / size;
+        float offset = 0.5 / size;
+        vec3 lutCoord = color * scale + offset;
+        return texture(lut, lutCoord).rgb;
+    }
+    return color;
+}
+
+
+//////// COLOR PALETTES ////////
+vec4 palette1[5] = vec4[5](
+  vec4(200.0/255.0, 192.0/255.0, 184.0/255.0, 1.0),
+  vec4(218.0/255.0, 218.0/255.0, 218.0/255.0, 1.0),
+  vec4(173.0/255.0, 201.0/255.0, 236.0/255.0, 1.0),
+  vec4(147.0/255.0, 188.0/255.0, 235.0/255.0, 1.0),
+  vec4(47.0/255.0, 42.0/255.0, 36.0/255.0, 1.0)
+);
+vec4 palette2[5] = vec4[5](
+  vec4(0.095690206,0.34556606,0.65443015,1),
+  vec4(0.65443015,0.90430737,0.99975336,1),
+  vec4(0.99975336,0.9043108,0.65443563,1),
+  vec4(0.65443546,0.3455713,0.09569348,1),
+  vec4(0.09569348,0.00024671858,0.09568856,1)
+);
+vec4 palette3[5] = vec4[5](
+  vec4(0.88235295,0.9764706,0.8980392,1),
+  vec4(0.7529412,0.35686275,0.43529412,1),
+  vec4(0.27058825,0.28627452,0.3764706,1),
+  vec4(0,0.16470589,0.32941177,1),
+  vec4(0.05882353,0.08235294,0.30588236,1)
+);
+vec4 palette4[5] = vec4[5](
+  vec4(0.6509804,0.76862746,0.7372549,1),
+  vec4(0.89411765,0.8627451,0.7921569,1),
+  vec4(0.91764706,0.48235294,0.34901962,1),
+  vec4(0.80784315,0.27450982,0.2784314,1),
+  vec4(0.32156864,0.27450982,0.3372549,1)
+);
+vec4 palette5[5] = vec4[5](
+  vec4(0.0627451,0.3019608,0.4509804,1),
+  vec4(0.4,0.7490196,0.6901961,1),
+  vec4(0.90588236,1,0.91764706,1),
+  vec4(1,1,0.92941177,1),
+  vec4(0,0,0,1)
+);
+
+
+vec4[5] getPalette(int index){
+  index = index % 5;
+  vec4 pal[5];
+  if(index == 0){
+    pal = palette1;
+  }else if(index == 1){
+    pal = palette2;
+  }else if(index == 2){
+    pal = palette3;
+  }else if(index == 3){
+    pal = palette4;
+  }
+  else if (index == 4){
+    pal = palette5;
+  }
+  return pal;
+}
+vec4 lookupColor(float lu, int index){
+  vec4 pal[5] = getPalette(index);
+  lu = fract(lu)*5.0;
+  int i = int(lu);
+  float f = fract(lu);
+  vec4 c0 = pal[i%5];
+  vec4 c1 = pal[(i+1)%5];
+  vec4 c = mix(c0, c1, f);
+  return vec4(c.rgb, 1.0);
+}
+
+vec4 lookupColor(float lu, vec4 pal[5]){
+  lu = fract(lu)*5.0;
+  int i = int(lu);
+  float f = fract(lu);
+
+  vec4 c0 = pal[i%5];
+  vec4 c1 = pal[(i+1)%5];
+  vec4 c = mix(c0, c1, f);
+
+  return vec4(c.rgb, 1.0);
+}
+
+vec4[5] mixPalette(vec4 pal[5], vec4 pal2[5], float m){
+
+  vec4 p[5] = vec4[5](
+    mix(pal[0], pal2[0], m),
+    mix(pal[1], pal2[1], m),
+    mix(pal[2], pal2[2], m),
+    mix(pal[3], pal2[3], m),
+    mix(pal[4], pal2[4], m)
+  );
+
+  return p;
+}
+
+float taylorInvSqrt(in float r) { return 1.79284291400159 - 0.85373472095314 * r; }
+vec2 taylorInvSqrt(in vec2 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+vec3 taylorInvSqrt(in vec3 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+vec4 taylorInvSqrt(in vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+
+float mod289(const in float x) { return x - floor(x * (1. / 289.)) * 289.; }
+vec2 mod289(const in vec2 x) { return x - floor(x * (1. / 289.)) * 289.; }
+vec3 mod289(const in vec3 x) { return x - floor(x * (1. / 289.)) * 289.; }
+vec4 mod289(const in vec4 x) { return x - floor(x * (1. / 289.)) * 289.; }
+
+float permute(const in float v) { return mod289(((v * 34.0) + 1.0) * v); }
+vec2 permute(const in vec2 v) { return mod289(((v * 34.0) + 1.0) * v); }
+vec3 permute(const in vec3 v) { return mod289(((v * 34.0) + 1.0) * v); }
+vec4 permute(const in vec4 v) { return mod289(((v * 34.0) + 1.0) * v); }
+
+float snoise(in vec3 v) {
+    const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;
+    const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);
+
+    // First corner
+    vec3 i  = floor(v + dot(v, C.yyy) );
+    vec3 x0 =   v - i + dot(i, C.xxx) ;
+
+    // Other corners
+    vec3 g = step(x0.yzx, x0.xyz);
+    vec3 l = 1.0 - g;
+    vec3 i1 = min( g.xyz, l.zxy );
+    vec3 i2 = max( g.xyz, l.zxy );
+
+    //   x0 = x0 - 0.0 + 0.0 * C.xxx;
+    //   x1 = x0 - i1  + 1.0 * C.xxx;
+    //   x2 = x0 - i2  + 2.0 * C.xxx;
+    //   x3 = x0 - 1.0 + 3.0 * C.xxx;
+    vec3 x1 = x0 - i1 + C.xxx;
+    vec3 x2 = x0 - i2 + C.yyy; // 2.0*C.x = 1/3 = C.y
+    vec3 x3 = x0 - D.yyy;      // -1.0+3.0*C.x = -0.5 = -D.y
+
+    // Permutations
+    i = mod289(i);
+    vec4 p = permute( permute( permute(
+                i.z + vec4(0.0, i1.z, i2.z, 1.0 ))
+            + i.y + vec4(0.0, i1.y, i2.y, 1.0 ))
+            + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));
+
+    // Gradients: 7x7 points over a square, mapped onto an octahedron.
+    // The ring size 17*17 = 289 is close to a multiple of 49 (49*6 = 294)
+    float n_ = 0.142857142857; // 1.0/7.0
+    vec3  ns = n_ * D.wyz - D.xzx;
+
+    vec4 j = p - 49.0 * floor(p * ns.z * ns.z);  //  mod(p,7*7)
+
+    vec4 x_ = floor(j * ns.z);
+    vec4 y_ = floor(j - 7.0 * x_ );    // mod(j,N)
+
+    vec4 x = x_ *ns.x + ns.yyyy;
+    vec4 y = y_ *ns.x + ns.yyyy;
+    vec4 h = 1.0 - abs(x) - abs(y);
+
+    vec4 b0 = vec4( x.xy, y.xy );
+    vec4 b1 = vec4( x.zw, y.zw );
+
+    //vec4 s0 = vec4(lessThan(b0,0.0))*2.0 - 1.0;
+    //vec4 s1 = vec4(lessThan(b1,0.0))*2.0 - 1.0;
+    vec4 s0 = floor(b0)*2.0 + 1.0;
+    vec4 s1 = floor(b1)*2.0 + 1.0;
+    vec4 sh = -step(h, vec4(0.0));
+
+    vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;
+    vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;
+
+    vec3 p0 = vec3(a0.xy,h.x);
+    vec3 p1 = vec3(a0.zw,h.y);
+    vec3 p2 = vec3(a1.xy,h.z);
+    vec3 p3 = vec3(a1.zw,h.w);
+
+    //Normalise gradients
+    vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
+    p0 *= norm.x;
+    p1 *= norm.y;
+    p2 *= norm.z;
+    p3 *= norm.w;
+
+    // Mix final noise value
+    vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+    m = m * m;
+    return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1),
+                                dot(p2,x2), dot(p3,x3) ) );
+}
+
+
+//thanks fabrice
+#define rotate(a) mat2(sin(a),-cos(a), cos(a),sin(a))
+
+vec4 rgbSimplex(vec3 st){
+  float n1 = snoise(st); //take orig seed 
+  float n2 = snoise(st);
+  float n3 = snoise(st);
+  return vec4(n1, n2, n3, 1.0);
+}
+
+
+vec4 fbmOG(vec3 st, float seed){
+    float G=u_gain; 
+    float freq = 1.0; 
+    float a = 1.0; 
+    vec4 t = vec4(0.0);
+    for(int i=0; i<8; i++){
+    t += a*rgbSimplex(freq*st);
+    freq*= u_lacunarity;
+    //freq = pow(2.0, float(i));
+    a*=G;
+    }
+    return t;
+}
+
+vec3 displace(vec3 st , vec2 vector, vec2 offset, vec2 midpoint, float scale){ //overload to pass vec3s
+	vec2 uvi = st.xy + scale * (vector.xy); 
+  return vec3(uvi, st.z);
+}
+
+float toBeNamedNoise(vec3 st){
+  float color = 0.0;// monoSimplex( st*st.x, 2.0) * monoSimplex(displace(st, st.xy, vec2(0.5), vec2(0.5), 0.1));
+  float m = snoise(st);
+  color = snoise(displace(st, vec2(m), vec2(0.5), vec2(0.5), m));
+  return color;
+}
+
+
+float fbmNoise(vec3 st){
+  float G=u_gain;
+  float freq = 1.; 
+  float a = u_bands; 
+  float t = 0.0;
+  for(int i=0; i<4; i++)
+    {
+      t+= a*snoise(freq*st);
+      freq*=u_lacunarity;
+      a*=(G);
+    }
+
+  return t * u_amplitude;
+}
+
+
+float terrain(vec3 point){
+	float signal = snoise(point); //sample
+
+	// // signal = abs(signal); //simplex noise will be ~[-.5,0.5], ridge at 0 (can comment out for experiment) 
+	signal *= signal; //emphasize features 
+
+    // //initialize for loop 
+	float result = signal; //declare variable to accumulate signal over octaves 
+	float weight = 1.; 
+	float frequency = 1.0;
+	vec4 color = vec4(0.);
+	for(int i=0; i<8; i++){
+		point *= u_lacunarity; //scale point
+		weight = signal * u_gain *2.; //weight of octave scaled by previous signal value at this point 
+		weight = clamp(weight, 0. , 1.); //stylistic
+		signal = snoise(point); //resample point with new point value 
+        signal = abs(signal); //stylistic
+		signal *= weight; //scale signal proportional to height 
+		result += signal * pow(frequency, -u_terrainH); //add octave signal to accumulated result, scaled by fractal dimension 
+		frequency *= u_lacunarity; //increment frequency
+	}
+
+	return result * u_amplitude;
+
+}
+
+float fbmNoise(vec3 st, int octaves,float gain, float lac, float amp){
+  float G=gain;
+  float freq = 1.0; 
+  float a = u_bands; 
+  float t = 0.0;
+  for(int i=0; i<octaves; i++)
+    {
+      t+= a* snoise(freq*st);
+      freq*=lac;
+      a*=(G);
+    }
+  //apply exponent to noise
+  t = sign(t) * pow(abs(t), u_exponent);
+  return t * amp;
+}
+
+float noisefunc(vec3 uv, int _type){
+	 if(_type == FBM){
+		return fbmNoise(uv, 8, u_gain, u_lacunarity, u_amplitude);
+	}
+	else if(_type == TERRAIN){
+		return terrain(uv);
+	}
+	else if(_type == TOBE){
+		return toBeNamedNoise(uv);
+	}
+}
+
+
+float ridge(vec3 st, float t){
+    float n = snoise(st);
+    n = abs(t + (n-t));
+    return n/t;
+}
+
+
+float dis(vec3 st){
+  //st.xy *= vec2(2.3, 1.5);
+	float G=u_gain; 
+    float freq = 1.0; 
+    float a = 1.0; 
+    float t = (0.0);
+    for(int i=0; i<8; i++){
+    t += a*toBeNamedNoise(freq*st);
+    freq*= u_lacunarity;
+    //freq = pow(2.0, float(i));
+    a*=G;
+    }
+  return t;
+}
+
+float ang(vec3 st){
+	vec3 tst = st;
+	st.y *= u_BaseAngY;
+	st.x *= u_BaseAngX;  
+  return snoise(tst) * fbmNoise(st, 8, .5, 2.0, 1.0);
+}
+
+float falloff(vec3 st){
+	st += ridge(st, 0.5) * st.y;
+	float maxDist = 1.0;
+  return min(snoise(st), maxDist);
+} 
+
+float noise(vec3 st){
+	float r =  fbmNoise(st, 8, .5, 2.0, 1.0);
+	// r = mix(r, fbm(st, uGain, uLacunarity, 8).r, uNoiseMix);
+  return r;
+}
+
+
+void warp(inout vec3 uv, inout vec2 delta, vec2 _warpfactor, int _noisefunc, int _numWarps, float _falloff, int _layer){
+	float scale = 1.;
+	float dx = 0.;
+	float dy = 0.;
+
+	vec2 ndx;
+	for(int i = 0; i < _numWarps; i++){
+		dx += _warpfactor.x * noisefunc(uv, _noisefunc);
+		dy += _warpfactor.y * noisefunc(vec3(uv.xy, uv.z + float(i)), _noisefunc);
+		// ndx = vec2(dx, dy); 
+		uv.x += scale * dx;
+		uv.y += scale * dy; 
+		scale *= _falloff;
+	}
+
+	delta = vec2(dx, dy); //output these accumulated values for mixing
+}
+
+#define DISP(ANG, DIST, MAX) uv.xy = uv.xy + vec2(cos(ANG(uv)*TWOPI), sin(ANG(uv)*TWOPI)) * DIST(uv) * MAX(uv);
+
+
+void applyLayer(inout vec3 uv, inout vec4 color, int _layer){
+	// calculate unwarped coordinates
+	vec2 uvOG = gl_FragCoord.xy / u_resolution;
+  uvOG = uvOG * vec2(2.0) - vec2(1.0);//center on origin
+	uvOG.y *= u_resolution.y/u_resolution.x;
+	uvOG.xy *= 1.0/u_PeriodArray[_layer]; 
+	vec2 delta; // vector to pass through our warping fucntion for coloring data
+	int iterations = int(u_IterationsArray[_layer]);
+	int type = int(u_NoisetypeArray[_layer]);
+	float falloff = u_FalloffArray[_layer];
+
+	//scaled based on a mix of layer specific parameters and constant paramater
+	vec3 warpData = vec3(u_WarpfactorxArray[_layer], u_WarpfactoryArray[_layer], 0.0);
+	vec2 warpfactor = warpData.rg;
+
+	// mix incoming warp with unwarped coords based in layer specific parameter 
+	float mixweight = u_MixogArray[_layer]; 
+
+	uv.xy = mix(uv.xy, uvOG.xy, mixweight);
+	// uv.yx /= warpData.b; 
+
+	iterations = clamp(iterations, 0, MAX_ITER);
+
+	warp(uv,delta, warpfactor, type, iterations, falloff, _layer);
+		
+  float tex = textureLod(s_palette, (uv.st), 4.0).r;
+  vec4 pal[5];
+    //colorize algorithm
+  switch((u_ColorMode > 0.5) ? 1 : 0){ //use mode to get palettes
+    case 0:
+      pal = mixPalette(getPalette(int(u_PaletteA)), getPalette(int(u_PaletteB)),u_PaletteMix);
+      break;
+    case 1:
+      pal = mixPalette(getPalette(int(u_PaletteA)), getPalette(int(u_PaletteB)),tex);
+      break;
+    default:
+      pal = mixPalette(getPalette(int(u_PaletteA)), getPalette(int(u_PaletteB)),u_PaletteMix);
+      break;
+  }
+	if(_layer == 0 ){
+		color=lookupColor(length(uv),pal);
+	}else{
+		float m = max(delta.x, delta.y);
+		color = mix(lookupColor(length(uv),pal), color, m);	
+	}
+}
+
+void main() {
+    vec2 uv = vUv;
+    float aspect = u_resolution.x / u_resolution.y;
+    uv.xy = uv * vec2(2.0) - vec2(1.0);
+    uv.x *= aspect;
+    uv *= 1.0/u_scale;
+
+    vec3 st = vec3(uv, u_time);
+    vec2 displacement = vec2(cos(ang(st)*TWOPI), sin(ang(st)*TWOPI)) * dis(st) * falloff(st);
+    vec2 baseuv = uv.xy+displacement;
+    st = vec3(baseuv, u_time);
+    st += u_seed;
+    // direct visualization of warped domain, lookuping up from a texture using warped coordinates
+    vec4 color;
+    color = texture(s_palette, baseuv);
+    applyLayer(st, color, 0);
+    applyLayer(st, color, 1);
+    applyLayer(st, color, 2);
+    applyLayer(st, color, 3);
+    applyLayer(st, color, 4);
+    color.a=1.0;
+
+    color.rgb = mix(color.rgb, vec3(luminance(color.rgb)), u_monochrome);
+
+    gl_FragColor = vec4(color);
+}
+`)

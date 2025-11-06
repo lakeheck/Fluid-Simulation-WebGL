@@ -1,19 +1,19 @@
 export const config = {
     SIM_RESOLUTION: 512, //simres
     DYE_RESOLUTION: 2160, //output res 
+    PALETTE_RESOLUTION: 128,
     ASPECT: 1.0,
-    FLOW: 5.4,
-    SPLAT_FLOW: 0.5,
+    FLOW: 3.44,
+    SPLAT_FLOW: 0.15,
     VELOCITYSCALE: 1.0,
     CAPTURE_RESOLUTION: 1024, //screen capture res 
     DENSITY_DISSIPATION: .25, //def need to figure out this one, think perhaps bc im squaring the color in splatColor
-    VELOCITY_DISSIPATION: 0.,
+    VELOCITY_DISSIPATION: 0.2,
     PRESSURE: 0.8,
-    PRESSURE_ITERATIONS: 100,
+    PRESSURE_ITERATIONS: 50,
     CURL: 30,
-    SPLAT_RADIUS: 0.25,
+    SPLAT_RADIUS: 0.15,
     SPLAT_FORCE: 6000,
-    COLOR_UPDATE_SPEED: 10,
     PAUSED: false,
     BACK_COLOR: { r: 0, g: 0, b: 0 },
     TRANSPARENT: false,
@@ -32,11 +32,12 @@ export const config = {
     DISPLAY_FLUID: true,
     RESET: false,
     RANDOM: false,
-    WIND_SCALE: .5,
+    WIND_SCALE: .05,
     WIND_TYPE: 8,
     BDRF_DIFFUSE: .196,
     BDRF_NORMALS: .081352,
     BDRF_FRESNAL: .105,
-    BDRF_ROUGH: .7256,
-    BDRF_SPECULAR: .345
+    BDRF_ROUGH: .57256,
+    BDRF_SPECULAR: .345,
+    LUT: 1.0
 };
