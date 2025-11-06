@@ -546,11 +546,12 @@ void main () {
 }
 `);
 
-export const splatColorShader = compileShader(gl.FRAGMENT_SHADER, `
+export const splatColorShader = compileShader(gl.FRAGMENT_SHADER, `#version 300 es
 precision highp float;
 precision highp sampler2D;
 
-varying vec2 vUv;
+in vec2 vUv;
+out vec4 fragColor;
 uniform sampler2D uTarget;
 uniform float aspectRatio;
 uniform vec2 point;
@@ -561,6 +562,100 @@ uniform float uFlow;
 uniform int uClick;
 uniform sampler2D uDensityMap;
 uniform sampler2D uColor;
+uniform sampler2D uNoise;
+
+uniform int uPaletteA,uPaletteB;
+uniform float uPaletteMix;
+//////// COLOR PALETTES ////////
+vec4 palette1[5] = vec4[5](
+  vec4(200.0/255.0, 192.0/255.0, 184.0/255.0, 1.0),
+  vec4(218.0/255.0, 218.0/255.0, 218.0/255.0, 1.0),
+  vec4(173.0/255.0, 201.0/255.0, 236.0/255.0, 1.0),
+  vec4(147.0/255.0, 188.0/255.0, 235.0/255.0, 1.0),
+  vec4(47.0/255.0, 42.0/255.0, 36.0/255.0, 1.0)
+);
+vec4 palette2[5] = vec4[5](
+  vec4(0.095690206,0.34556606,0.65443015,1),
+  vec4(0.65443015,0.90430737,0.99975336,1),
+  vec4(0.99975336,0.9043108,0.65443563,1),
+  vec4(0.65443546,0.3455713,0.09569348,1),
+  vec4(0.09569348,0.00024671858,0.09568856,1)
+);
+vec4 palette3[5] = vec4[5](
+  vec4(0.88235295,0.9764706,0.8980392,1),
+  vec4(0.7529412,0.35686275,0.43529412,1),
+  vec4(0.27058825,0.28627452,0.3764706,1),
+  vec4(0,0.16470589,0.32941177,1),
+  vec4(0.05882353,0.08235294,0.30588236,1)
+);
+vec4 palette4[5] = vec4[5](
+  vec4(0.6509804,0.76862746,0.7372549,1),
+  vec4(0.89411765,0.8627451,0.7921569,1),
+  vec4(0.91764706,0.48235294,0.34901962,1),
+  vec4(0.80784315,0.27450982,0.2784314,1),
+  vec4(0.32156864,0.27450982,0.3372549,1)
+);
+vec4 palette5[5] = vec4[5](
+  vec4(0.0627451,0.3019608,0.4509804,1),
+  vec4(0.4,0.7490196,0.6901961,1),
+  vec4(0.90588236,1,0.91764706,1),
+  vec4(1,1,0.92941177,1),
+  vec4(0,0,0,1)
+);
+
+
+vec4[5] getPalette(int index){
+  index = index % 5;
+  vec4 pal[5];
+  if(index == 0){
+    pal = palette1;
+  }else if(index == 1){
+    pal = palette2;
+  }else if(index == 2){
+    pal = palette3;
+  }else if(index == 3){
+    pal = palette4;
+  }
+  else if (index == 4){
+    pal = palette5;
+  }
+  return pal;
+}
+vec4 lookupColor(float lu, int index){
+  vec4 pal[5] = getPalette(index);
+  lu = fract(lu)*5.0;
+  int i = int(lu);
+  float f = fract(lu);
+  vec4 c0 = pal[i%5];
+  vec4 c1 = pal[(i+1)%5];
+  vec4 c = mix(c0, c1, f);
+  return vec4(c.rgb, 1.0);
+}
+
+vec4 lookupColor(float lu, vec4 pal[5]){
+  lu = fract(lu)*5.0;
+  int i = int(lu);
+  float f = fract(lu);
+
+  vec4 c0 = pal[i%5];
+  vec4 c1 = pal[(i+1)%5];
+  vec4 c = mix(c0, c1, f);
+
+  return vec4(c.rgb, 1.0);
+}
+
+vec4[5] mixPalette(vec4 pal[5], vec4 pal2[5], float m){
+
+  vec4 p[5] = vec4[5](
+    mix(pal[0], pal2[0], m),
+    mix(pal[1], pal2[1], m),
+    mix(pal[2], pal2[2], m),
+    mix(pal[3], pal2[3], m),
+    mix(pal[4], pal2[4], m)
+  );
+
+  return p;
+}
 
 
 
@@ -569,13 +664,17 @@ void main () {
     p.x *= aspectRatio;
 
     vec3 splat = vec3(0);
-    splat = texture2D(uColor, vUv).xyz;  
-    // splat = texture2D(uDensityMap, vUv).xyz * texture2D(uColor, vUv).xyz;  
+
+    float noise = texture(uNoise, vUv).r;
+    int pal1 = int(uPaletteA);
+    int pal2 = int(uPaletteB);
+    vec4[5] pal = mixPalette(getPalette(pal1),getPalette(pal2),uPaletteMix);
+    splat = lookupColor(noise, pal).rgb;
 
     splat = smoothstep(0.0, 1.0, splat);
     splat *= uFlow;
-    vec3 base = texture2D(uTarget, vUv).xyz;
-    gl_FragColor = vec4(base + splat, 1.0);
+    vec3 base = texture(uTarget, vUv).xyz;
+    fragColor = vec4(base + splat, 1.0);
 }
 `);
 
@@ -1481,7 +1580,6 @@ void main() {
     st += u_seed;
     // direct visualization of warped domain, lookuping up from a texture using warped coordinates
     vec4 color;
-    color = texture(s_palette, baseuv);
     applyLayer(st, color, 0);
     applyLayer(st, color, 1);
     applyLayer(st, color, 2);

@@ -35,13 +35,15 @@ export class Fluid{
     splatProgram              = new LGL.Program(GLSL.baseVertexShader, GLSL.splatShader);
     splatColorClickProgram    = new LGL.Program(GLSL.baseVertexShader, GLSL.splatColorClickShader);
     splatVelProgram           = new LGL.Program(GLSL.baseVertexShader, GLSL.splatVelShader); //added to support color / vel map
-    splatColorProgram         = new LGL.Program(GLSL.baseVertexShader, GLSL.splatColorShader); //added to support color / vel map
+    splatColorProgram         = new LGL.Program(GLSL.noiseVertexShader, GLSL.splatColorShader); //added to support color / vel map
     advectionProgram          = new LGL.Program(GLSL.baseVertexShader, GLSL.advectionShader);
     divergenceProgram         = new LGL.Program(GLSL.baseVertexShader, GLSL.divergenceShader);
     curlProgram               = new LGL.Program(GLSL.baseVertexShader, GLSL.curlShader);
     vorticityProgram          = new LGL.Program(GLSL.baseVertexShader, GLSL.vorticityShader);
     pressureProgram           = new LGL.Program(GLSL.baseVertexShader, GLSL.pressureShader);
     gradientSubtractProgram   = new LGL.Program(GLSL.baseVertexShader, GLSL.gradientSubtractShader);
+    noiseProgram              = new LGL.Program(GLSL.noiseVertexShader, GLSL.noiseShader); //noise generator 
+    windProgram               = new LGL.Program(GLSL.baseVertexShader, GLSL.windShader);
     pbrProgram                = new LGL.Program(GLSL.noiseVertexShader, GLSL.bdrfShader); //noise generator 
     LUTProgram                = new LGL.Program(GLSL.noiseVertexShader, GLSL.LUTShader);
     domainWarpProgram         = new LGL.Program(GLSL.noiseVertexShader, GLSL.domainWarpShader);
@@ -55,7 +57,7 @@ export class Fluid{
     wind;
 
     picture = LGL.createTextureAsync('img/colored_noise_bg.jpg');
-    ditheringTexture = LGL.createTextureAsync('img/LDR_LLL1_0.png');
+    ditheringTexture = LGL.createTextureAsync('img/colored_noise_bg.jpg');
 
     initFramebuffers () {
         let simRes = LGL.getResolution(config.SIM_RESOLUTION,  config.FORCE_ASPECT);//getResolution basically just applies view aspect ratio to the passed resolution 
@@ -74,6 +76,11 @@ export class Fluid{
         //this lets us define the buffer objects that we wil want to use for feedback 
         if (this.dye == null || this.noise == null){
             this.dye = LGL.createDoubleFBO(dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
+            this.noise = LGL.createDoubleFBO(simRes.width/2, simRes.height/2, rgba.internalFormat, rgba.format, texType, filtering);
+        }
+        else {//resize if needed 
+            // this.dye = LGL.resizeDoubleFBO(this.dye, dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering); // TODO this line is causing the horizontal bars on window resize
+            this.noise = LGL.resizeDoubleFBO(this.noise, simRes.width, simRes.height, rg.internalFormat, rg.format, texType, filtering);
         }
         if (this.velocity == null){
             this.velocity = LGL.createDoubleFBO(simRes.width, simRes.height, rg.internalFormat, rg.format, texType, filtering);
@@ -86,6 +93,7 @@ export class Fluid{
         this.divergence = LGL.createFBO      (simRes.width, simRes.height, r.internalFormat, r.format, texType, gl.NEAREST);
         this.curl       = LGL.createFBO      (simRes.width, simRes.height, r.internalFormat, r.format, texType, gl.NEAREST);
         this.pressure   = LGL.createDoubleFBO(simRes.width, simRes.height, r.internalFormat, r.format, texType, gl.NEAREST);
+        this.wind       = LGL.createFBO      (simRes.width/2, simRes.height/2, rgba.internalFormat, rgba.format, texType, gl.LINEAR);
         this.post       = LGL.createFBO      (dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, gl.LINEAR);
         this.palette    = LGL.createFBO      (palRes.width, palRes.height, rgba.internalFormat, rgba.format, texType, gl.LINEAR);
 
@@ -230,14 +238,22 @@ export class Fluid{
 
     step (dt) {
         gl.disable(gl.BLEND);
-
-        // this.domainWarpProgram.bind();
-        // gl.uniform1f(this.domainWarpProgram.uniforms.u_time, Date.now()); 
-        // gl.uniform3f(this.domainWarpProgram.uniforms.u_seed, 0,0,0); 
-        // LGL.blit(this.picture);
-        
-        
-        // Noise and wind are now generated inside the velocity splat shader
+                
+        // Baked noise pass (sampled in BRDF/palette mapping)
+        this.noiseProgram.bind();
+        gl.uniform1f(this.noiseProgram.uniforms.uPeriod, 3.0);
+        gl.uniform3f(this.noiseProgram.uniforms.uTranslate, 0.0, 0.0, 0.0);
+        gl.uniform1f(this.noiseProgram.uniforms.uAmplitude, 1.0);
+        gl.uniform1f(this.noiseProgram.uniforms.uSeed, this.noiseSeed);
+        gl.uniform1f(this.noiseProgram.uniforms.uExponent, 1.0);
+        gl.uniform1f(this.noiseProgram.uniforms.uRidgeThreshold, 1.0);
+        gl.uniform1f(this.noiseProgram.uniforms.uLacunarity, 2.0);
+        gl.uniform1f(this.noiseProgram.uniforms.uGain, 0.5);
+        gl.uniform1i(this.noiseProgram.uniforms.uOctaves, 4);
+        gl.uniform3f(this.noiseProgram.uniforms.uScale, 1., 1., 1.);
+        gl.uniform1f(this.noiseProgram.uniforms.uAspect, config.ASPECT);
+        LGL.blit(this.noise.write);
+        this.noise.swap();
 
         this.curlProgram.bind();
         gl.uniform2f(this.curlProgram.uniforms.texelSize, this.velocity.texelSizeX, this.velocity.texelSizeY);
@@ -264,7 +280,7 @@ export class Fluid{
         LGL.blit(this.pressure.write);
         this.pressure.swap();
         
-         this.pressureProgram.bind();
+        this.pressureProgram.bind();
         gl.uniform2f(this.pressureProgram.uniforms.texelSize, this.velocity.texelSizeX, this.velocity.texelSizeY);
         gl.uniform1i(this.pressureProgram.uniforms.uDivergence, this.divergence.attach(0));
         // Adaptive pressure iterations: aim for ~16.6ms frame; reduce when slow, recover when fast
@@ -292,17 +308,18 @@ export class Fluid{
         if(config.FORCE_MAP_ENABLE){
             this.splatVelProgram.bind();
             gl.uniform1i(this.splatVelProgram.uniforms.uTarget, this.velocity.read.attach(0)); 
-            gl.uniform1i(this.splatVelProgram.uniforms.uDensityMap, this.picture.attach(1)); //density mask
-            gl.uniform1f(this.splatVelProgram.uniforms.aspectRatio, canvas.width / canvas.height);
-            gl.uniform1f(this.splatVelProgram.uniforms.uVelocityScale, config.VELOCITYSCALE);
-            // pass wind uniforms
+            // density mask
+            gl.uniform1i(this.splatVelProgram.uniforms.uDensityMap, this.picture.attach(1));
+            // wind + noise uniforms (match splatVelShader)
             gl.uniform1f(this.splatVelProgram.uniforms.uGlobalWindScale, config.WIND_SCALE);
-            gl.uniform2f(this.splatVelProgram.uniforms.uCenter, 0.5, 0.5);
             gl.uniform1f(this.splatVelProgram.uniforms.uSmoothness, 0.1);
             gl.uniform1f(this.splatVelProgram.uniforms.uWindMix, 0.5);
+            gl.uniform2f(this.splatVelProgram.uniforms.uCenter, 0.5, 0.5);
             gl.uniform1f(this.splatVelProgram.uniforms.uWindPattern1, config.WIND_TYPE);
             gl.uniform1f(this.splatVelProgram.uniforms.uWindPattern2, 10.0);
             gl.uniform1f(this.splatVelProgram.uniforms.uTimeNoise, this.noiseSeed);
+            gl.uniform1f(this.splatVelProgram.uniforms.aspectRatio, canvas.width / canvas.height);
+            gl.uniform1f(this.splatVelProgram.uniforms.uVelocityScale, config.VELOCITYSCALE);
             gl.uniform2f(this.splatVelProgram.uniforms.point, 0, 0);
             gl.uniform3f(this.splatVelProgram.uniforms.color, 0, 0, 1);
             gl.uniform1i(this.splatVelProgram.uniforms.uClick, 0);
@@ -320,6 +337,9 @@ export class Fluid{
             gl.uniform1i(this.splatColorProgram.uniforms.uTarget, this.dye.read.attach(0));
             gl.uniform1i(this.splatColorProgram.uniforms.uColor, this.picture.attach(1)); //color map
             gl.uniform1i(this.splatColorProgram.uniforms.uDensityMap, this.picture.attach(2)); //density map
+            gl.uniform1i(this.splatColorProgram.uniforms.uNoise, this.noise.read.attach(3)); //noise map
+            gl.uniform1i(this.splatColorProgram.uniforms.uPaletteA, config.PALETTE_A);
+            gl.uniform1i(this.splatColorProgram.uniforms.uPaletteB, config.PALETTE_B);
             gl.uniform1i(this.splatVelProgram.uniforms.uClick, 0);
             gl.uniform1f(this.splatColorProgram.uniforms.radius, this.correctRadius(config.SPLAT_RADIUS / 100.0));
             LGL.blit(this.dye.write);
@@ -532,6 +552,9 @@ export class Fluid{
         addFromSchema(fluidFolder, 'WIND_TYPE');
 		addFromSchema(fluidFolder, 'LUT');
 		addFromSchema(fluidFolder, 'BDRF_NORMALS');
+        addFromSchema(fluidFolder, 'PALETTE_A');
+        addFromSchema(fluidFolder, 'PALETTE_B');
+        addFromSchema(fluidFolder, 'PALETTE_MIX');
         fluidFolder.open();
         
 		const pausedCtrl = addFromSchema(gui, 'PAUSED');
