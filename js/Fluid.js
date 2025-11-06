@@ -18,6 +18,10 @@ export class Fluid{
         this.lutTex = null;
         this.lutReady = false;
         this.lutSize = 0.0;
+        this.lastFrameMs = 16.6;
+        this.adaptivePressureIterations = 0;
+        this.idleFrames = 0;
+        this.inputsActive = true;
     }
     
     splatStack = [];
@@ -154,14 +158,16 @@ export class Fluid{
         let now = Date.now();
         let then = this.lastUpdateTime;
         // let dt = 0.016666;
-        let dt = (now - then) / 1000;
+        let frameMs = (now - then);
+        this.lastFrameMs = frameMs;
+        let dt = frameMs / 1000;
         dt = Math.min(dt, 0.016666); //never want to update slower than 60fps
         this.lastUpdateTime = now;
         this.noiseSeed += dt * config.NOISE_TRANSLATE_SPEED;
         if (LGL.resizeCanvas() || (this.dye.width != config.DYE_RESOLUTION && this.dye.height != config.DYE_RESOLUTION) || (this.velocity.width != config.SIM_RESOLUTION && this.velocity.height != config.SIM_RESOLUTION)) //resize if needed 
             this.initFramebuffers();
         this.updateColors(dt); //step through our sim 
-        this.applyInputs(); //take from ui
+        this.applyInputs(); //take from ui (updates inputsActive)
         if (!config.PAUSED)
             this.step(dt); //do a calculation step 
         this.drawDisplay(null);
@@ -189,16 +195,21 @@ export class Fluid{
     }
 
     applyInputs () {
-        // console.log(this.splatStack);
-        if (this.splatStack.length > 0) //if there are splats then recreate them
-        this.multipleSplats(this.splatStack.pop());//TODO - verify what elemetns of splatStack are and what splatStack.pop() will return (should be int??)
-        
-        this.pointers.forEach(p => { //create a splat for our pointers 
+        let hadInput = false;
+        if (this.splatStack.length > 0) {
+            this.multipleSplats(this.splatStack.pop());
+            hadInput = true;
+        }
+        this.pointers.forEach(p => {
             if (p.moved) {
                 p.moved = false;
                 this.splatPointer(p);
+                hadInput = true;
             }
         });
+        // consider force/density maps as active driving signals
+        this.inputsActive = hadInput || !!config.FORCE_MAP_ENABLE || !!config.DENSITY_MAP_ENABLE;
+        this.idleFrames = this.inputsActive ? 0 : (this.idleFrames + 1);
     }
 
     step (dt) {
@@ -264,7 +275,16 @@ export class Fluid{
          this.pressureProgram.bind();
         gl.uniform2f(this.pressureProgram.uniforms.texelSize, this.velocity.texelSizeX, this.velocity.texelSizeY);
         gl.uniform1i(this.pressureProgram.uniforms.uDivergence, this.divergence.attach(0));
-        for (let i = 0; i < config.PRESSURE_ITERATIONS; i++) {
+        // Adaptive pressure iterations: aim for ~16.6ms frame; reduce when slow, recover when fast
+        if (this.adaptivePressureIterations === 0) this.adaptivePressureIterations = config.PRESSURE_ITERATIONS | 0;
+        if (this.lastFrameMs > 18.0) this.adaptivePressureIterations = Math.max(4, Math.floor(this.adaptivePressureIterations * 0.85));
+        else if (this.lastFrameMs < 14.0) this.adaptivePressureIterations = Math.min(config.PRESSURE_ITERATIONS | 0, Math.ceil(this.adaptivePressureIterations * 1.1));
+        let effectiveIterations = this.adaptivePressureIterations;
+        // Light idle optimization: when idle, reduce iterations every other frame
+        if (!this.inputsActive && (this.idleFrames % 2 === 1)) {
+            effectiveIterations = Math.max(2, Math.floor(effectiveIterations * 0.6));
+        }
+        for (let i = 0; i < effectiveIterations; i++) {
             gl.uniform1i(this.pressureProgram.uniforms.uPressure, this.pressure.read.attach(1));
             LGL.blit(this.pressure.write);
             this.pressure.swap();
