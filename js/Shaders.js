@@ -447,7 +447,7 @@ uniform vec2 point;
 uniform float radius;
 uniform float uVelocityScale;
 uniform sampler2D uDensityMap;
-
+uniform sampler2D uNoise;
 // Wind controls (copied from wind shader)
 uniform float uGlobalWindScale, uSmoothness, uWindMix;
 uniform vec2 uCenter;
@@ -538,7 +538,7 @@ void main () {
     vec3 splat = vec3(0.0);
     splat = smoothstep(0.0, 1.0, texture2D(uDensityMap, vUv).xyz);
     // Generate procedural force (noise + wind)
-    vec2 fNoise = noiseVec(vUv) * uVelocityScale;
+    vec2 fNoise = texture2D(uNoise, vUv).rg * uVelocityScale;
     vec2 fWind = wind(vUv, 0.5, uSmoothness, int(uWindPattern1)) * uGlobalWindScale;
     vec3 force = vec3(mix(fNoise, fWind, clamp(uWindMix, 0.0, 1.0)), 0.0);
     vec3 base = texture2D(uTarget, vUv).xyz;
@@ -957,6 +957,12 @@ uniform float uSpec;
 uniform float uWetDry;
 #define RGB
 
+// Master post controls
+uniform float uExposure;     // EV stops
+uniform float uContrast;     // 1.0 = neutral
+uniform float uGamma;        // 1.0 = neutral
+uniform float uBrightness;   // 0.0 = neutral
+
 float luminance(vec3 v){
     return dot(v, vec3(0.2126, 0.7152, 0.0722));
 }
@@ -1113,6 +1119,20 @@ void main () {
         lutColor = texture(u_LUT, coord).rgb;
     }
 
-	fragColor = vec4(mix(surfaceColor, lutColor, clamp(u_LUTMix, 0.0, 1.0)), 1.0);
+    // Mix LUT
+    vec3 finalColor = mix(surfaceColor, lutColor, clamp(u_LUTMix, 0.0, 1.0));
+
+    // Master post controls
+    // Exposure: multiply energy by 2^EV
+    finalColor *= exp2(uExposure);
+    // Brightness: linear lift
+    finalColor += uBrightness;
+    // Contrast: pivot around mid-grey 0.5
+    finalColor = (finalColor - 0.5) * uContrast + 0.5;
+    // Gamma: standard correction, guard against <=0
+    finalColor = pow(max(finalColor, vec3(0.0)), vec3(1.0 / max(uGamma, 1e-4)));
+    finalColor = clamp(finalColor, 0.0, 1.0);
+
+	fragColor = vec4(finalColor, 1.0);
 }
 `);

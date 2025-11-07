@@ -62,7 +62,11 @@ export class Fluid{
         'img/gold-pal.jpg',
         'img/blue-pal.jpg',
         'img/red-pal.jpg',
-        'img/ramp1.jpg'
+        'img/ramp1.jpg',
+        'img/circle.jpg',
+        'img/rect.jpg',
+        'img/line.jpg',
+        'img/circle-filled.jpg'
     ]);
 
     initFramebuffers () {
@@ -245,15 +249,15 @@ export class Fluid{
                 
         // Baked noise pass (sampled in BRDF/palette mapping)
         this.noiseProgram.bind();
-        gl.uniform1f(this.noiseProgram.uniforms.uPeriod, 3.0);
+        gl.uniform1f(this.noiseProgram.uniforms.uPeriod, config.PERIOD);
         gl.uniform3f(this.noiseProgram.uniforms.uTranslate, 0.0, 0.0, 0.0);
-        gl.uniform1f(this.noiseProgram.uniforms.uAmplitude, 1.0);
+        gl.uniform1f(this.noiseProgram.uniforms.uAmplitude, config.AMP);
         gl.uniform1f(this.noiseProgram.uniforms.uSeed, this.noiseSeed);
-        gl.uniform1f(this.noiseProgram.uniforms.uExponent, 1.0);
-        gl.uniform1f(this.noiseProgram.uniforms.uRidgeThreshold, 1.0);
-        gl.uniform1f(this.noiseProgram.uniforms.uLacunarity, 2.0);
-        gl.uniform1f(this.noiseProgram.uniforms.uGain, 0.5);
-        gl.uniform1i(this.noiseProgram.uniforms.uOctaves, 4);
+        gl.uniform1f(this.noiseProgram.uniforms.uExponent, config.EXPONENT);
+        gl.uniform1f(this.noiseProgram.uniforms.uRidgeThreshold, config.RIDGE);
+        gl.uniform1f(this.noiseProgram.uniforms.uLacunarity, config.LACUNARITY);
+        gl.uniform1f(this.noiseProgram.uniforms.uGain, config.GAIN);
+        gl.uniform1i(this.noiseProgram.uniforms.uOctaves, config.OCTAVES);
         gl.uniform3f(this.noiseProgram.uniforms.uScale, 1., 1., 1.);
         gl.uniform1f(this.noiseProgram.uniforms.uAspect, config.ASPECT);
         LGL.blit(this.noise.write);
@@ -315,6 +319,7 @@ export class Fluid{
             // density mask
             gl.uniform1i(this.splatVelProgram.uniforms.uDensityMap, this.picture.attach(1));
             // wind + noise uniforms (match splatVelShader)
+            gl.uniform1i(this.splatVelProgram.uniforms.uNoise, this.noise.read.attach(2));
             const t = Date.now() * 0.001;
             const cx = 0.5 + 0.2 * Math.cos(t * 0.1);
             const cy = 0.5 + 0.2 * Math.sin(t * 0.13);
@@ -398,6 +403,11 @@ export class Fluid{
         gl.uniform1f(this.pbrProgram.uniforms.uSpec, config.BDRF_SPECULAR);
         gl.uniform1f(this.pbrProgram.uniforms.uWetDry, .5);
         gl.uniform1f(this.pbrProgram.uniforms.uNormalScale, config.BDRF_NORMALS);
+        // Master post uniforms
+        gl.uniform1f(this.pbrProgram.uniforms.uExposure,   config.EXPOSURE);
+        gl.uniform1f(this.pbrProgram.uniforms.uContrast,   config.CONTRAST);
+        gl.uniform1f(this.pbrProgram.uniforms.uGamma,      config.GAMMA);
+        gl.uniform1f(this.pbrProgram.uniforms.uBrightness, config.BRIGHTNESS);
 
         if (this.lutReady && this.lutTex && this.lutSize > 0) {
             gl.activeTexture(gl.TEXTURE1);
@@ -569,6 +579,10 @@ export class Fluid{
         addFromSchema(fluidFolder, 'WIND_TYPE');
 		addFromSchema(fluidFolder, 'LUT');
 		addFromSchema(fluidFolder, 'BDRF_NORMALS');
+        addFromSchema(fluidFolder, 'EXPOSURE');
+        addFromSchema(fluidFolder, 'CONTRAST');
+        addFromSchema(fluidFolder, 'GAMMA');
+        addFromSchema(fluidFolder, 'BRIGHTNESS');
         addFromSchema(fluidFolder, 'PALETTE_A');
         addFromSchema(fluidFolder, 'PALETTE_B');
         addFromSchema(fluidFolder, 'PALETTE_MIX');

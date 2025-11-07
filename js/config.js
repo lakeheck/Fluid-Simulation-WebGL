@@ -9,7 +9,7 @@ export const CONFIG_SCHEMA = {
   PALETTE_RESOLUTION: { default: 512,  type: 'int',  label: 'Palette Resolution' },
   CAPTURE_RESOLUTION: { default: 1024, type: 'int',  label: 'Capture Resolution' },
   PALETTE_A: { default: 1, min: 0, max: 4, type: 'int', label: 'Palette A', layerParam: true },
-  PALETTE_B: { default: 1, min: 0, max: 4, type: 'int', label: 'Palette B', layerParam: true },
+  PALETTE_B: { default: 1, min: 0, max: 10, type: 'int', label: 'Palette B', layerParam: true },
   PALETTE_MIX: { default: 0.5, min: 0, max: 1, step: 0.01, label: 'Palette Mix', layerParam: true },
   PALETTE_PERIOD: { default: 3.0, min: 1, max: 5, step: 0.01, label: 'Palette Period', layerParam: true },
   PALETTE_REMAP: { default: 0.0, min: 0, max: 1, step: 0.01, label: 'Palette Remap', layerParam: true },
@@ -19,7 +19,7 @@ export const CONFIG_SCHEMA = {
   ASPECT:             { default: 1.0,  min: 0.1, max: 5,  step: 0.01, label: 'Aspect' },
   FLOW:               { default: 3.44, min: 0,   max: 10, step: 0.01, label: 'Flow' , layerParam: true },
   SPLAT_FLOW:         { default: 0.15, min: 0,   max: 1,  step: 0.001, label: 'Splat Flow' },
-  VELOCITYSCALE:      { default: 0.0,  min: 0,   max: 1,  step: 0.01, label: 'Velocity Scale', layerParam: true  },
+  VELOCITYSCALE:      { default: 0.0,  min: 0,   max: 5,  step: 0.01, label: 'Velocity Scale', layerParam: true  },
   DENSITY_DISSIPATION:{ default: 0.25, min: 0,   max: 1,  step: 0.001, label: 'Density Dissipation', layerParam: true },
   VELOCITY_DISSIPATION:{ default: 0.2, min: 0,   max: 1,  step: 0.001, label: 'Velocity Dissipation' },
   PRESSURE:           { default: 0.8,  min: 0,   max: 1,  step: 0.01, label: 'Pressure' },
@@ -33,7 +33,7 @@ export const CONFIG_SCHEMA = {
   DISPLAY_FLUID:      { default: true,  type: 'bool', label: 'Display Fluid' },
   // -------------------- Noise Params --------------------
   EXPONENT:           { default: 1.0, min: 0, max: 4, step: 0.01, label: 'Exponent' },
-  PERIOD:             { default: 3.0, min: 0, max: 10, step: 0.01, label: 'Period' },
+  PERIOD:             { default: 10.0, min: 0, max: 10, step: 0.01, label: 'Period' },
   RIDGE:              { default: 1.0, min: 0, max: 2, step: 0.01, label: 'Ridge' },
   AMP:                { default: 1.0, min: 0, max: 2, step: 0.01, label: 'Amplitude' },
   LACUNARITY:         { default: 2.0, min: 0, max: 6, step: 0.01, label: 'Lacunarity' },
@@ -55,6 +55,12 @@ export const CONFIG_SCHEMA = {
   BDRF_ROUGH:         { default: 0.57256, min: 0, max: 1, step: 0.0001, label: 'BDRF Roughness' },
   BDRF_SPECULAR:      { default: 0.345,   min: 0, max: 1, step: 0.0001, label: 'BDRF Specular' },
   LUT:                { default: 1.0, min: 0, max: 1, step: 0.01, label: 'LUT Mix', layerParam: true  },
+
+  // -------------------- Master Post Controls --------------------
+  EXPOSURE:           { default: 0.0,  min: -5, max: 5, step: 0.01, label: 'Exposure' },
+  CONTRAST:           { default: 1.0,  min: 0,  max: 3, step: 0.01, label: 'Contrast' },
+  GAMMA:              { default: 1.0,  min: 0.1,max: 3, step: 0.01, label: 'Gamma' },
+  BRIGHTNESS:         { default: 0.0,  min: -1, max: 1, step: 0.01, label: 'Brightness' },
   // -------------------- Feature Toggles --------------------
   FORCE_MAP_ENABLE:   { default: true,  type: 'bool', label: 'Force Map Enable' },
   DENSITY_MAP_ENABLE: { default: true,  type: 'bool', label: 'Density Map Enable' },
