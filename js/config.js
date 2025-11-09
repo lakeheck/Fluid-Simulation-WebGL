@@ -18,11 +18,11 @@ export const CONFIG_SCHEMA = {
   // -------------------- Fluid Dynamics --------------------
   ASPECT:             { default: 1.0,  min: 0.1, max: 5,  step: 0.01, label: 'Aspect' },
   FLOW:               { default: 3.44, min: 0,   max: 10, step: 0.01, label: 'Flow' , layerParam: true },
-  SPLAT_FLOW:         { default: 0.15, min: 0,   max: 1,  step: 0.001, label: 'Splat Flow' },
+  SPLAT_FLOW:         { default: 0.0215, min: 0,   max: .15,  step: 0.001, label: 'Splat Flow' },
   VELOCITYSCALE:      { default: 0.0,  min: 0,   max: 5,  step: 0.01, label: 'Velocity Scale', layerParam: true  },
   DENSITY_DISSIPATION:{ default: 0.25, min: 0,   max: 1,  step: 0.001, label: 'Density Dissipation', layerParam: true },
-  VELOCITY_DISSIPATION:{ default: 0.2, min: 0,   max: 1,  step: 0.001, label: 'Velocity Dissipation' },
-  PRESSURE:           { default: 0.8,  min: 0,   max: 1,  step: 0.01, label: 'Pressure' },
+  VELOCITY_DISSIPATION:{ default: 0.2, min: 0,   max: 1,  step: 0.001, label: 'Velocity Dissipation', layerParam: true },
+  PRESSURE:           { default: 0.8,  min: 0,   max: 1,  step: 0.01, label: 'Pressure', layerParam: true },
   PRESSURE_ITERATIONS:{ default: 50,   min: 1,   max: 100, type: 'int', label: 'Pressure Iterations' },
   CURL:               { default: 30,   min: 0,   max: 100, step: 0.1, label: 'Curl Strength', layerParam: true  },
   SPLAT_RADIUS:       { default: 0.15, min: 0,   max: 1,  step: 0.001, label: 'Splat Radius' },
@@ -43,11 +43,17 @@ export const CONFIG_SCHEMA = {
   NOISE_TRANSLATE_SPEED:{ default: 0.0015, min: 0, max: .025, step: 0.001, label: 'Noise Translate Speed' },
 
   // -------------------- Control / Misc --------------------
-  PAUSED:             { default: false, type: 'bool', label: 'Paused', id: 'paused', layerParam: true },
   RESET:              { default: false, type: 'bool', label: 'Reset' },
   RANDOM:             { default: false, type: 'bool', label: 'Randomize Input' },
   WIND_SCALE:         { default: 0.5, min: 0, max: 2, step: 0.001, label: 'Wind Scale', id: 'windScale', layerParam: true },
   WIND_TYPE:          { default: 10, min: 0, max: 11, step: 1, type: 'int', label: 'Wind Type', layerParam: true  },
+
+  // -------------------- Simulated Pointer --------------------
+  SIM_ENABLE:         { default: false, type: 'bool', label: 'Sim Input' },
+  SIM_SPEED:          { default: 0.25, min: 0, max: 5, step: 0.001, label: 'Sim Speed' },
+  SIM_TRAVEL:         { default: 0.42, min: 0.05, max: 0.49, step: 0.001, label: 'Sim Travel' },
+  SIM_FORCE:          { default: 2000, min: 0, max: 10000, step: 10, label: 'Sim Force' },
+  SIM_COLOR_SPEED:    { default: 0.2, min: 0, max: 2, step: 0.001, label: 'Sim Color Speed' },
   // -------------------- BDRF Material Params --------------------
   BDRF_DIFFUSE:       { default: 0.196,   min: 0, max: 1, step: 0.0001, label: 'BDRF Diffuse', layerParam: true  },
   BDRF_NORMALS:       { default: 0.081352,min: 0, max: 1, step: 0.0001, label: 'BDRF Normals' , layerParam: true },
@@ -57,10 +63,10 @@ export const CONFIG_SCHEMA = {
   LUT:                { default: 1.0, min: 0, max: 1, step: 0.01, label: 'LUT Mix', layerParam: true  },
 
   // -------------------- Master Post Controls --------------------
-  EXPOSURE:           { default: 0.0,  min: -5, max: 5, step: 0.01, label: 'Exposure' },
-  CONTRAST:           { default: 1.0,  min: 0,  max: 3, step: 0.01, label: 'Contrast' },
-  GAMMA:              { default: 1.0,  min: 0.1,max: 3, step: 0.01, label: 'Gamma' },
-  BRIGHTNESS:         { default: 0.0,  min: -1, max: 1, step: 0.01, label: 'Brightness' },
+  EXPOSURE:           { default: 0.0,  min: -5, max: 5, step: 0.01, label: 'Exposure', layerParam: true },
+  CONTRAST:           { default: 1.0,  min: 0,  max: 3, step: 0.01, label: 'Contrast', layerParam: true },
+  GAMMA:              { default: 1.0,  min: 0.1,max: 3, step: 0.01, label: 'Gamma', layerParam: true },
+  BRIGHTNESS:         { default: 0.0,  min: -1, max: 1, step: 0.01, label: 'Brightness', layerParam: true },
   // -------------------- Feature Toggles --------------------
   FORCE_MAP_ENABLE:   { default: true,  type: 'bool', label: 'Force Map Enable' },
   DENSITY_MAP_ENABLE: { default: true,  type: 'bool', label: 'Density Map Enable' },

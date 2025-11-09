@@ -23,6 +23,7 @@ export class Fluid{
         this.adaptivePressureIterations = 0;
         this.idleFrames = 0;
         this.inputsActive = true;
+        this.sim = { t: 0.0, x: 0.5, y: 0.5, lastX: 0.5, lastY: 0.5, colorTimer: 0.0, color: LGL.generateColor() };
     }
     
     splatStack = [];
@@ -89,14 +90,16 @@ export class Fluid{
             this.noise = LGL.createDoubleFBO(simRes.width/2, simRes.height/2, rgba.internalFormat, rgba.format, texType, filtering);
         }
         else {//resize if needed 
-            // this.dye = LGL.resizeDoubleFBO(this.dye, dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering); // TODO this line is causing the horizontal bars on window resize
-            this.noise = LGL.resizeDoubleFBO(this.noise, simRes.width/2, simRes.height/2, rg.internalFormat, rg.format, texType, filtering);
+            // Recreate double FBOs on resize to avoid dependency on copyProgram
+            this.dye = LGL.createDoubleFBO(dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
+            this.noise = LGL.createDoubleFBO(simRes.width/2, simRes.height/2, rgba.internalFormat, rgba.format, texType, filtering);
         }
         if (this.velocity == null){
             this.velocity = LGL.createDoubleFBO(simRes.width, simRes.height, rg.internalFormat, rg.format, texType, filtering);
         }
         else{//resize if needed 
-            this.velocity = LGL.resizeDoubleFBO(this.velocity, simRes.width, simRes.height, rg.internalFormat, rg.format, texType, filtering);
+            // Recreate velocity on resize
+            this.velocity = LGL.createDoubleFBO(simRes.width, simRes.height, rg.internalFormat, rg.format, texType, filtering);
         } 
         //other buffer objects that dont need feedback / ping-pong 
         //notice the filtering type is set to gl.NEAREST meaning we grab just a single px, no filtering 
@@ -174,6 +177,40 @@ export class Fluid{
         }
     }
 
+    updateSimPointer (dt) {
+        // time advance
+        const speed = Math.max(0.0, config.SIM_SPEED || 0.0);
+        this.sim.t += dt * speed;
+        const t = this.sim.t;
+        // bounded travel around center
+        const travel = Math.min(Math.max(config.SIM_TRAVEL || 0.42, 0.0), 0.49);
+        // lightweight FBM-style motion using summed sines with different phases
+        const sx = (Math.sin(t * 1.731) + 0.5 * Math.sin(t * 2.913 + 1.234) + 0.25 * Math.sin(t * 4.187 + 2.345)) / (1.0 + 0.5 + 0.25);
+        const sy = (Math.sin(t * 1.521 + 0.789) + 0.5 * Math.sin(t * 2.477 + 2.468) + 0.25 * Math.sin(t * 3.963 + 0.357)) / (1.0 + 0.5 + 0.25);
+        const sz = (Math.sin(t * 1.317 + 0.987) + 0.5 * Math.sin(t * 2.269 + 1.478) + 0.25 * Math.sin(t * 3.753 + 0.567)) / (1.0 + 0.5 + 0.25);
+        let x = 0.5 + travel * sx;
+        let y = 0.5 + travel * sy;
+        // guard for edges
+        x = Math.min(0.985, Math.max(0.015, x));
+        y = Math.min(0.985, Math.max(0.015, y));
+        // velocity from delta
+        const force = Math.max(0.0, config.SIM_FORCE || 0.0) * (sz > 0 ? 1.0 : 0.0);
+        const dx = (x - this.sim.lastX) * force;
+        const dy = (y - this.sim.lastY) * force;
+        this.sim.lastX = x;
+        this.sim.lastY = y;
+        // occasional color change
+        const colorSpeed = Math.max(0.0, config.SIM_COLOR_SPEED || 0.0);
+        this.sim.colorTimer += dt * colorSpeed;
+        if (this.sim.colorTimer >= 1.0) {
+            this.sim.colorTimer = 0.0;
+            this.sim.color = LGL.generateColor();
+        }
+        // drive the fluid like a pointer splat
+        this.inputsActive = true; // keep sim from idling while active
+        this.splat(x, y, dx, dy, this.sim.color);
+    }
+
     
     simulate(){
         // this.updateKeywords();
@@ -196,10 +233,18 @@ export class Fluid{
         dt = Math.min(dt, 0.016666); //never want to update slower than 60fps
         this.lastUpdateTime = now;
         this.noiseSeed += dt * config.NOISE_TRANSLATE_SPEED;
-        if (LGL.resizeCanvas() || (this.dye.width != config.DYE_RESOLUTION && this.dye.height != config.DYE_RESOLUTION) || (this.velocity.width != config.SIM_RESOLUTION && this.velocity.height != config.SIM_RESOLUTION)) //resize if needed 
+        // Re-init FBOs if canvas or target resolutions changed
+        const _simRes = LGL.getResolution(config.SIM_RESOLUTION,  config.FORCE_ASPECT);
+        const _dyeRes = LGL.getResolution(config.DYE_RESOLUTION,  config.FORCE_ASPECT);
+        if (LGL.resizeCanvas()
+            || this.dye.width !== _dyeRes.width || this.dye.height !== _dyeRes.height
+            || this.velocity.width !== _simRes.width || this.velocity.height !== _simRes.height) {
             this.initFramebuffers();
+        }
         this.updateColors(dt); //step through our sim 
         this.applyInputs(); //take from ui (updates inputsActive)
+        // noise-driven simulated input (virtual pointer)
+        if (config.SIM_ENABLE) this.updateSimPointer(dt);
         if (!config.PAUSED)
             this.step(dt); //do a calculation step 
         this.drawDisplay(null);
@@ -589,10 +634,14 @@ export class Fluid{
         addFromSchema(fluidFolder, 'PALETTE_PERIOD');
         addFromSchema(fluidFolder, 'PALETTE_REMAP');
         addFromSchema(fluidFolder, 'PALETTE_MULTIPLY');
-        fluidFolder.open();
+        addFromSchema(fluidFolder, 'SIM_ENABLE');
+        addFromSchema(fluidFolder, 'SIM_SPEED');
+        addFromSchema(fluidFolder, 'SIM_TRAVEL');
+        addFromSchema(fluidFolder, 'SIM_FORCE');
+        addFromSchema(fluidFolder, 'SIM_COLOR_SPEED');
+        fluidFolder.close();
         
-		const pausedCtrl = addFromSchema(gui, 'PAUSED');
-		if (pausedCtrl && pausedCtrl.listen) pausedCtrl.listen();
+
 		const resetCtrl = addFromSchema(gui, 'RESET');
 		if (resetCtrl) resetCtrl.onFinishChange(reset);
 		const randomCtrl = addFromSchema(gui, 'RANDOM');
