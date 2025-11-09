@@ -666,7 +666,31 @@ export class Fluid{
         }
 
         function randomizeParams(){
-            fluidFolder.__controllers.forEach(c => c.setValue(Math.random()*(c.__max - c.__min) + c.__min));
+            fluidFolder.__controllers.forEach(c => {
+                const key = c.property;
+                const meta = CONFIG_SCHEMA[key];
+                if (!meta || meta.randomize !== true) return;
+                if (meta.type === 'bool') {
+                    c.setValue(Math.random() < 0.5);
+                    return;
+                }
+                if (meta.type === 'color') {
+                    // Expecting RGB object {r,g,b}; skip unless explicitly marked randomize
+                    const col = LGL.generateColor ? LGL.generateColor() : { r: Math.random(), g: Math.random(), b: Math.random() };
+                    // dat.GUI color controllers accept object or hex; config uses object
+                    c.setValue({ r: Math.round(col.r*255), g: Math.round(col.g*255), b: Math.round(col.b*255) });
+                    return;
+                }
+                const min = (typeof c.__min === 'number') ? c.__min : 0.0;
+                const max = (typeof c.__max === 'number') ? c.__max : 1.0;
+                let v = Math.random() * (max - min) + min;
+                if (meta.type === 'int') v = Math.round(v);
+                if (typeof meta.step === 'number' && meta.step > 0 && meta.type !== 'int') {
+                    v = Math.round(v / meta.step) * meta.step;
+                }
+                v = Math.min(max, Math.max(min, v));
+                c.setValue(v);
+            });
         }
 
         // -------------------- Presets (Save / Load) --------------------
@@ -732,11 +756,77 @@ export class Fluid{
             writePresets(all);
             refreshSelect();
         }
+        // Export / Import helpers
+        function download(filename, text){
+            const blob = new Blob([text], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        function exportAction(){
+            const name = (presetsModel.name || presetsModel.selected || 'Preset').trim();
+            const safe = name.replace(/[\\/:*?"<>|]+/g, '_');
+            const payload = {
+                name,
+                version: 1,
+                timestamp: new Date().toISOString(),
+                config: captureCurrent()
+            };
+            download(`${safe}.json`, JSON.stringify(payload, null, 2));
+        }
+        function exportAllAction(){
+            const all = readPresets();
+            const payload = {
+                name: 'All Presets',
+                version: 1,
+                timestamp: new Date().toISOString(),
+                presets: all
+            };
+            download(`presets.json`, JSON.stringify(payload, null, 2));
+        }
+        function importAction(){
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'application/json,.json';
+            input.onchange = (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                    try {
+                        const data = JSON.parse(String(reader.result || ''));
+                        // Accept either {config:{...}} or flat config object
+                        const presetObj = data && data.config && typeof data.config === 'object' ? data.config : data;
+                        applyPreset(presetObj);
+                        // Optionally store under provided name
+                        const all = readPresets();
+                        const nm = (data && data.name) ? String(data.name) : (file.name.replace(/\.json$/i,'') || 'Imported');
+                        all[nm] = presetObj;
+                        writePresets(all);
+                        presetsModel.name = nm;
+                        refreshSelect();
+                    } catch (err) {
+                        console.error('Invalid preset JSON:', err);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        refreshSelect();
         presetsFolder.add({save: saveAction}, 'save').name('Save Preset');
         presetsFolder.add({load: loadAction}, 'load').name('Load Preset');
+        presetsFolder.add({export: exportAction}, 'export').name('Export Preset (.json)');
+        presetsFolder.add({exportAll: exportAllAction}, 'exportAll').name('Export All Presets (presets.json)');
+        presetsFolder.add({import: importAction}, 'import').name('Import Preset (.json)');
         presetsFolder.add({remove: deleteAction}, 'remove').name('Delete Preset');
-        refreshSelect();
-        presetsFolder.open();
+        presetsFolder.close();
 
     }
 } //end class
