@@ -568,10 +568,12 @@ uniform sampler2D uNoise;
 uniform sampler2DArray uPaletteArray;
 uniform int uPaletteA;
 uniform int uPaletteB;
+uniform int uMaskPalette;
 uniform float uPaletteRemap;
 uniform float uPaletteMultiply;
 uniform float uPaletteMix;
 uniform float uPalettePeriod;
+uniform float uSplitPalette, uSplitAxis, uSplitSmoothness;
 //////// COLOR PALETTES ////////
 vec4 palette1[5] = vec4[5](
   vec4(200.0/255.0, 192.0/255.0, 184.0/255.0, 1.0),
@@ -673,10 +675,14 @@ void main () {
 
     vec2 noise = texture(uNoise, vUv/uPalettePeriod).rg;
     noise.rg = mix(vUv.st, noise.rg, uPaletteRemap);
-    vec3 colA = texture(uPaletteArray, vec3(fract(noise), float(max(0, uPaletteA)))).rgb;
-    vec3 colB = texture(uPaletteArray, vec3(fract(noise), float(max(0, uPaletteB)))).rgb;
-    splat = mix(colA, colB, clamp(uPaletteMix, 0.0, 1.0));
-    splat = mix(splat, colA * colB, uPaletteMultiply);
+    vec3 palA = texture(uPaletteArray, vec3(fract(noise), float(max(0, uPaletteA)))).rgb;
+    vec3 palB = texture(uPaletteArray, vec3(fract(noise), float(max(0, uPaletteB)))).rgb;
+    vec3 mask = texture(uPaletteArray, vec3(fract(noise), float(max(0, uMaskPalette)))).rgb;
+    splat = mix(palA, palB, clamp(uPaletteMix, 0.0, 1.0));
+    if(uSplitPalette > 0.0){
+      splat = mix(palA, palB, smoothstep(uSplitSmoothness, 1.0-uSplitSmoothness, (int(uSplitAxis) == 0 ? vUv.s : vUv.t)));
+    }
+    splat = mix(splat, splat * mask, uPaletteMultiply);
     splat = smoothstep(0.0, 1.0, splat);
     splat *= uFlow;
     vec3 base = texture(uTarget, vUv).xyz;
@@ -785,7 +791,7 @@ varying vec2 vT;
 varying vec2 vB;
 uniform sampler2D uVelocity;
 uniform sampler2D uCurl;
-uniform float curl;
+uniform float curl, uCurlFadeSmoothness,uCurlFadeAxis,uCurlFadeValue;
 uniform float dt;
 
 void main () {
@@ -797,7 +803,7 @@ void main () {
 
     vec2 force = 0.5 * vec2(abs(T) - abs(B), abs(R) - abs(L));
     force /= length(force) + 0.0001;
-    force *= curl * C;
+    force *= mix(curl*C, curl * C * smoothstep(uCurlFadeSmoothness, 1.0 - uCurlFadeSmoothness, (int(uCurlFadeAxis) == 0 ? vUv.s : vUv.t)), uCurlFadeValue);
     force.y *= -1.0;
 
     vec2 velocity = texture2D(uVelocity, vUv).xy;

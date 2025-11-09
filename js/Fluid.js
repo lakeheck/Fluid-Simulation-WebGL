@@ -317,6 +317,9 @@ export class Fluid{
         gl.uniform1i(this.vorticityProgram.uniforms.uVelocity, this.velocity.read.attach(0));
         gl.uniform1i(this.vorticityProgram.uniforms.uCurl, this.curl.attach(1));
         gl.uniform1f(this.vorticityProgram.uniforms.curl, config.CURL);
+        gl.uniform1f(this.vorticityProgram.uniforms.uCurlFadeSmoothness, config.CURL_FADE_SMOOTHNESS);
+        gl.uniform1f(this.vorticityProgram.uniforms.uCurlFadeAxis, config.CURL_FADE_AXIS);
+        gl.uniform1f(this.vorticityProgram.uniforms.uCurlFadeValue, config.CURL_FADE_VALUE);
         gl.uniform1f(this.vorticityProgram.uniforms.dt, dt);
         LGL.blit(this.velocity.write);
         this.velocity.swap();
@@ -401,10 +404,15 @@ export class Fluid{
             const depth = Math.max(1, this.paletteArray.depth || 1);
             const palA = Math.min(Math.max((config.PALETTE_A|0), 0), depth - 1);
             const palB = Math.min(Math.max((config.PALETTE_B|0), 0), depth - 1);
+            const maskPal = Math.min(Math.max((config.MASK_PALETTE|0), 0), depth - 1);
             gl.uniform1i(this.splatColorProgram.uniforms.uPaletteA, palA);
+            gl.uniform1f(this.splatColorProgram.uniforms.uSplitPalette, config.SPLIT_PALETTE);
+            gl.uniform1f(this.splatColorProgram.uniforms.uSplitAxis, config.SPLIT_AXIS);
+            gl.uniform1f(this.splatColorProgram.uniforms.uSplitSmoothness, config.SPLIT_SMOOTHNESS);
             gl.uniform1f(this.splatColorProgram.uniforms.uPaletteRemap, config.PALETTE_REMAP);
             gl.uniform1f(this.splatColorProgram.uniforms.uPaletteMultiply, config.PALETTE_MULTIPLY);
             gl.uniform1i(this.splatColorProgram.uniforms.uPaletteB, palB);
+            gl.uniform1i(this.splatColorProgram.uniforms.uMaskPalette, maskPal);
             gl.uniform1f(this.splatColorProgram.uniforms.uPalettePeriod, config.PALETTE_PERIOD);
             gl.uniform1i(this.splatVelProgram.uniforms.uClick, 0);
             gl.uniform1f(this.splatColorProgram.uniforms.radius, this.correctRadius(config.SPLAT_RADIUS / 100.0));
@@ -629,6 +637,10 @@ export class Fluid{
         addFromSchema(fluidFolder, 'BRIGHTNESS');
         addFromSchema(fluidFolder, 'PALETTE_A');
         addFromSchema(fluidFolder, 'PALETTE_B');
+        addFromSchema(fluidFolder, 'MASK_PALETTE');
+        addFromSchema(fluidFolder, 'SPLIT_PALETTE');
+        addFromSchema(fluidFolder, 'SPLIT_AXIS');
+        addFromSchema(fluidFolder, 'SPLIT_SMOOTHNESS');
         addFromSchema(fluidFolder, 'PALETTE_MIX');
         addFromSchema(fluidFolder, 'PALETTE_PERIOD');
         addFromSchema(fluidFolder, 'PALETTE_REMAP');
@@ -638,6 +650,9 @@ export class Fluid{
         addFromSchema(fluidFolder, 'SIM_TRAVEL');
         addFromSchema(fluidFolder, 'SIM_FORCE');
         addFromSchema(fluidFolder, 'SIM_COLOR_SPEED');
+        addFromSchema(fluidFolder, 'CURL_FADE_SMOOTHNESS');
+        addFromSchema(fluidFolder, 'CURL_FADE_AXIS');
+        addFromSchema(fluidFolder, 'CURL_FADE_VALUE');
         fluidFolder.close();
         
 
@@ -653,6 +668,75 @@ export class Fluid{
         function randomizeParams(){
             fluidFolder.__controllers.forEach(c => c.setValue(Math.random()*(c.__max - c.__min) + c.__min));
         }
+
+        // -------------------- Presets (Save / Load) --------------------
+        const PRESET_KEY = 'maelstrom_presets_v1';
+        const presetsFolder = gui.addFolder('Presets');
+        const presetsModel = { name: 'Preset 1', selected: '' };
+
+        function readPresets(){
+            try { return JSON.parse(localStorage.getItem(PRESET_KEY) || '{}'); }
+            catch(e){ return {}; }
+        }
+        function writePresets(obj){
+            try { localStorage.setItem(PRESET_KEY, JSON.stringify(obj)); }
+            catch(e){ /* ignore quota */ }
+        }
+        function listNames(){
+            return Object.keys(readPresets()).sort();
+        }
+        function captureCurrent(){
+            const out = {};
+            Object.keys(CONFIG_SCHEMA).forEach(k => { out[k] = config[k]; });
+            return out;
+        }
+        function applyPreset(presetObj){
+            if (!presetObj) return;
+            Object.keys(presetObj).forEach(k => {
+                if (k in config) config[k] = presetObj[k];
+            });
+            // sync visible controls
+            fluidFolder.__controllers.forEach(c => {
+                const k = c.property;
+                if (k in config) c.setValue(config[k]);
+            });
+        }
+
+        // UI
+        const nameCtrl = presetsFolder.add(presetsModel, 'name').name('Name');
+        let selectCtrl = null;
+        function refreshSelect(){
+            if (selectCtrl) presetsFolder.remove(selectCtrl);
+            const names = listNames();
+            presetsModel.selected = names[0] || '';
+            selectCtrl = presetsFolder.add(presetsModel, 'selected', names).name('Select');
+        }
+        function saveAction(){
+            const name = (presetsModel.name || '').trim();
+            if (!name) return;
+            const all = readPresets();
+            all[name] = captureCurrent();
+            writePresets(all);
+            refreshSelect();
+        }
+        function loadAction(){
+            const all = readPresets();
+            const preset = all[presetsModel.selected];
+            applyPreset(preset);
+        }
+        function deleteAction(){
+            const sel = presetsModel.selected;
+            if (!sel) return;
+            const all = readPresets();
+            delete all[sel];
+            writePresets(all);
+            refreshSelect();
+        }
+        presetsFolder.add({save: saveAction}, 'save').name('Save Preset');
+        presetsFolder.add({load: loadAction}, 'load').name('Load Preset');
+        presetsFolder.add({remove: deleteAction}, 'remove').name('Delete Preset');
+        refreshSelect();
+        presetsFolder.open();
 
     }
 } //end class
