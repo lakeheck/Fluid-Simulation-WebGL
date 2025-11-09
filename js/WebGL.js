@@ -46,6 +46,24 @@ export class Program {
     }
 }
 
+// Minimal pass-through shader program for texture copy during FBO resize
+const _copyVS = compileShader(gl.VERTEX_SHADER, `
+precision mediump float;
+attribute vec2 aPosition;
+varying vec2 vUv;
+void main() {
+    vUv = 0.5 * (aPosition + 1.0);
+    gl_Position = vec4(aPosition, 0.0, 1.0);
+}`);
+const _copyFS = compileShader(gl.FRAGMENT_SHADER, `
+precision mediump float;
+varying vec2 vUv;
+uniform sampler2D uTexture;
+void main() {
+    gl_FragColor = texture2D(uTexture, vUv);
+}`);
+const copyProgram = new Program(_copyVS, _copyFS);
+
 export function getSupportedFormat (gl, internalFormat, format, type)
 {
     if (!supportRenderTextureFormat(gl, internalFormat, format, type))

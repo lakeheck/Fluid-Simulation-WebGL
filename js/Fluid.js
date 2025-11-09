@@ -90,16 +90,15 @@ export class Fluid{
             this.noise = LGL.createDoubleFBO(simRes.width/2, simRes.height/2, rgba.internalFormat, rgba.format, texType, filtering);
         }
         else {//resize if needed 
-            // Recreate double FBOs on resize to avoid dependency on copyProgram
-            this.dye = LGL.createDoubleFBO(dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
-            this.noise = LGL.createDoubleFBO(simRes.width/2, simRes.height/2, rgba.internalFormat, rgba.format, texType, filtering);
+            // Content-preserving resize
+            this.dye = LGL.resizeDoubleFBO(this.dye, dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
+            this.noise = LGL.resizeDoubleFBO(this.noise, simRes.width/2, simRes.height/2, rgba.internalFormat, rgba.format, texType, filtering);
         }
         if (this.velocity == null){
             this.velocity = LGL.createDoubleFBO(simRes.width, simRes.height, rg.internalFormat, rg.format, texType, filtering);
         }
         else{//resize if needed 
-            // Recreate velocity on resize
-            this.velocity = LGL.createDoubleFBO(simRes.width, simRes.height, rg.internalFormat, rg.format, texType, filtering);
+            this.velocity = LGL.resizeDoubleFBO(this.velocity, simRes.width, simRes.height, rg.internalFormat, rg.format, texType, filtering);
         } 
         //other buffer objects that dont need feedback / ping-pong 
         //notice the filtering type is set to gl.NEAREST meaning we grab just a single px, no filtering 
@@ -194,7 +193,7 @@ export class Fluid{
         x = Math.min(0.985, Math.max(0.015, x));
         y = Math.min(0.985, Math.max(0.015, y));
         // velocity from delta
-        const force = Math.max(0.0, config.SIM_FORCE || 0.0) * (sz > 0 ? 1.0 : 0.0);
+        const force = Math.max(0.0, config.SIM_FORCE || 0.0);
         const dx = (x - this.sim.lastX) * force;
         const dy = (y - this.sim.lastY) * force;
         this.sim.lastX = x;
