@@ -18,7 +18,7 @@ export const CONFIG_SCHEMA = {
   PALETTE_PERIOD: { default: 3.0, min: 1, max: 5, step: 0.01, label: 'Palette Period', layerParam: true , randomize: true},
   PALETTE_REMAP: { default: 0.0, min: 0, max: 1, step: 0.01, label: 'Palette Remap', layerParam: true , randomize: true},
   PALETTE_MULTIPLY: { default: 0.0, min: 0, max: 1, step: 0.01, label: 'Palette Multiply', layerParam: true , randomize: true},
-  CURL_FADE_SMOOTHNESS: { default: 0.5, min: 0, max: 1, step: 0.01, label: 'Curl Fade Smoothness', layerParam: true , randomize: true},
+  CURL_FADE_SMOOTHNESS: { default: 0.4, min: 0, max: 1, step: 0.01, label: 'Curl Fade Smoothness', layerParam: true , randomize: true},
   CURL_FADE_AXIS: { default: 0, min: 0, max: 1, step: 0.01, label: 'Curl Fade Axis', layerParam: true , randomize: true},
   CURL_FADE_VALUE: { default: 1.0, min: 0, max: 1, step: 0.01, label: 'Curl Fade Value', layerParam: true , randomize: true},
   FORCE_ASPECT: {default: false, type: 'bool'},
@@ -70,10 +70,10 @@ export const CONFIG_SCHEMA = {
   LUT:                { default: 1.0, min: 0, max: 1, step: 0.01, label: 'LUT Mix', layerParam: true  },
 
   // -------------------- Master Post Controls --------------------
-  EXPOSURE:           { default: 0.0,  min: -5, max: 5, step: 0.01, label: 'Exposure', layerParam: true },
-  CONTRAST:           { default: 1.0,  min: 0,  max: 3, step: 0.01, label: 'Contrast', layerParam: true },
-  GAMMA:              { default: 1.0,  min: 0.1,max: 3, step: 0.01, label: 'Gamma', layerParam: true },
-  BRIGHTNESS:         { default: 0.0,  min: -1, max: 1, step: 0.01, label: 'Brightness', layerParam: true },
+  EXPOSURE:           { default: 0.0,  min: -1, max: 1, step: 0.001, label: 'Exposure', layerParam: true },
+  CONTRAST:           { default: 1.0,  min: .5,  max: 1.5, step: 0.01, label: 'Contrast', layerParam: true },
+  GAMMA:              { default: 1.0,  min: 0.1,max: 2, step: 0.01, label: 'Gamma', layerParam: true },
+  BRIGHTNESS:         { default: 0.0,  min: -.1, max: .1, step: 0.001, label: 'Brightness', layerParam: true },
   // -------------------- Feature Toggles --------------------
   FORCE_MAP_ENABLE:   { default: true,  type: 'bool', label: 'Force Map Enable' },
   DENSITY_MAP_ENABLE: { default: true,  type: 'bool', label: 'Density Map Enable' },
